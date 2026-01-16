@@ -9,14 +9,7 @@ import {
   Ticket,
   FilePenLine,
 } from 'lucide-react';
-import {
-  Bar,
-  BarChart,
-  ResponsiveContainer,
-  XAxis,
-  YAxis,
-  Tooltip,
-} from 'recharts';
+import { Bar, BarChart, XAxis, YAxis, Tooltip } from 'recharts';
 
 import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
@@ -36,7 +29,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { ChartTooltipContent } from '@/components/ui/chart';
+import {
+  ChartContainer,
+  ChartTooltipContent,
+  type ChartConfig,
+} from '@/components/ui/chart';
 import { announcements, complaints } from '@/lib/data';
 
 const chartData = [
@@ -52,6 +49,17 @@ const chartData = [
   { time: '5pm', entries: 40, exits: 50 },
 ];
 
+const chartConfig = {
+  entries: {
+    label: 'Entries',
+    color: 'hsl(var(--chart-2))',
+  },
+  exits: {
+    label: 'Exits',
+    color: 'hsl(var(--chart-5))',
+  },
+} satisfies ChartConfig;
+
 export default function DashboardPage() {
   return (
     <>
@@ -60,17 +68,23 @@ export default function DashboardPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Students</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Total Students
+              </CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">1,234</div>
-              <p className="text-xs text-muted-foreground">+20.1% from last month</p>
+              <p className="text-xs text-muted-foreground">
+                +20.1% from last month
+              </p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Rooms Occupied</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Rooms Occupied
+              </CardTitle>
               <BedDouble className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -80,7 +94,9 @@ export default function DashboardPage() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Outpasses</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Pending Outpasses
+              </CardTitle>
               <Ticket className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -90,7 +106,9 @@ export default function DashboardPage() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Complaints</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Active Complaints
+              </CardTitle>
               <FilePenLine className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -106,8 +124,8 @@ export default function DashboardPage() {
               <CardDescription>Student movement today.</CardDescription>
             </CardHeader>
             <CardContent className="pl-2">
-              <ResponsiveContainer width="100%" height={350}>
-                <BarChart data={chartData}>
+              <ChartContainer config={chartConfig} className="w-full h-[350px]">
+                <BarChart accessibilityLayer data={chartData}>
                   <XAxis
                     dataKey="time"
                     stroke="#888888"
@@ -123,13 +141,21 @@ export default function DashboardPage() {
                     tickFormatter={(value) => `${value}`}
                   />
                   <Tooltip
-                    content={<ChartTooltipContent />}
+                    content={<ChartTooltipContent hideIndicator />}
                     cursor={{ fill: 'hsl(var(--muted))' }}
                   />
-                  <Bar dataKey="entries" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} name="Entries" />
-                  <Bar dataKey="exits" fill="hsl(var(--chart-5))" radius={[4, 4, 0, 0]} name="Exits" />
+                  <Bar
+                    dataKey="entries"
+                    fill="var(--color-entries)"
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Bar
+                    dataKey="exits"
+                    fill="var(--color-exits)"
+                    radius={[4, 4, 0, 0]}
+                  />
                 </BarChart>
-              </ResponsiveContainer>
+              </ChartContainer>
             </CardContent>
           </Card>
           <Card className="lg:col-span-3">
@@ -147,8 +173,12 @@ export default function DashboardPage() {
                       <Bell className="h-5 w-5 text-primary-foreground" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium leading-none">{ann.title}</p>
-                      <p className="text-sm text-muted-foreground truncate">{ann.content}</p>
+                      <p className="text-sm font-medium leading-none">
+                        {ann.title}
+                      </p>
+                      <p className="text-sm text-muted-foreground truncate">
+                        {ann.content}
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -192,14 +222,26 @@ export default function DashboardPage() {
                     </TableCell>
                     <TableCell>{complaint.category}</TableCell>
                     <TableCell>
-                      <Badge 
-                        variant={complaint.status === 'Resolved' ? 'default' : complaint.status === 'In Progress' ? 'secondary' : 'destructive'}
-                        className={complaint.status === 'Resolved' ? 'bg-green-100 text-green-800' : ''}
+                      <Badge
+                        variant={
+                          complaint.status === 'Resolved'
+                            ? 'default'
+                            : complaint.status === 'In Progress'
+                              ? 'secondary'
+                              : 'destructive'
+                        }
+                        className={
+                          complaint.status === 'Resolved'
+                            ? 'bg-green-100 text-green-800'
+                            : ''
+                        }
                       >
                         {complaint.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">{complaint.date}</TableCell>
+                    <TableCell className="text-right">
+                      {complaint.date}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
