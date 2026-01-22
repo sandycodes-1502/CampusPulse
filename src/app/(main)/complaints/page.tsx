@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 'use client'; // For DropdownMenu and any future interactions
 
 import { PageHeader } from '@/components/layout/page-header';
@@ -8,6 +9,11 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+=======
+
+import { PageHeader } from '@/components/layout/page-header';
+import { complaints } from '@/lib/data';
+>>>>>>> 679d7a337a06e817fa56902ae1df6d597b1339a8
 import {
   Table,
   TableBody,
@@ -16,6 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+<<<<<<< HEAD
 import { Badge } from '@/components/ui/badge';
 import { complaints } from '@/lib/data';
 import { cn } from '@/lib/utils';
@@ -28,10 +35,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { MoreHorizontal } from 'lucide-react';
+=======
+>>>>>>> 679d7a337a06e817fa56902ae1df6d597b1339a8
 
 export default function ComplaintsPage() {
   return (
     <>
+<<<<<<< HEAD
       <PageHeader title="Hostel Complaint Tracker" />
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <Card>
@@ -109,6 +119,39 @@ export default function ComplaintsPage() {
             </Table>
           </CardContent>
         </Card>
+=======
+      <PageHeader
+        title="Complaint Tracker"
+        description="Manage and track hostel complaints, ensuring timely resolution."
+      />
+      <div className="container mx-auto py-10">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>ID</TableHead>
+              <TableHead>Student Name</TableHead>
+              <TableHead>Room Number</TableHead>
+              <TableHead>Category</TableHead>
+              <TableHead>Description</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Date</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {complaints.map((complaint) => (
+              <TableRow key={complaint.id}>
+                <TableCell>{complaint.id}</TableCell>
+                <TableCell>{complaint.studentName}</TableCell>
+                <TableCell>{complaint.roomNumber}</TableCell>
+                <TableCell>{complaint.category}</TableCell>
+                <TableCell>{complaint.description}</TableCell>
+                <TableCell>{complaint.status}</TableCell>
+                <TableCell>{complaint.date}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+>>>>>>> 679d7a337a06e817fa56902ae1df6d597b1339a8
       </div>
     </>
   );
