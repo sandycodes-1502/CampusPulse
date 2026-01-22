@@ -176,7 +176,7 @@ export default function DashboardPage() {
                       <p className="text-sm font-medium leading-none">
                         {ann.title}
                       </p>
-                      <p className="text-sm text-muted-foreground truncate">
+                      <p className="text-sm text-muted-foreground whitespace-normal">
                         {ann.content}
                       </p>
                     </div>
