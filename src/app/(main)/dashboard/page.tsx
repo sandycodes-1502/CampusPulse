@@ -10,7 +10,10 @@ import {
   FilePenLine,
 } from 'lucide-react';
 import { Bar, BarChart, XAxis, YAxis, Tooltip } from 'recharts';
+import { collection, query, orderBy, limit } from 'firebase/firestore';
+import { format } from 'date-fns';
 
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
 import {
@@ -34,7 +37,9 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from '@/components/ui/chart';
-import { announcements, complaints } from '@/lib/data';
+import { Skeleton } from '@/components/ui/skeleton';
+import type { Announcement, Complaint } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 const chartData = [
   { time: '8am', entries: 5, exits: 2 },
@@ -61,6 +66,31 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export default function DashboardPage() {
+  const firestore = useFirestore();
+
+  const announcementsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(
+      collection(firestore, 'announcements'),
+      orderBy('postDate', 'desc'),
+      limit(3)
+    );
+  }, [firestore]);
+
+  const complaintsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(
+      collection(firestore, 'complaints'),
+      orderBy('submissionDate', 'desc'),
+      limit(5)
+    );
+  }, [firestore]);
+
+  const { data: announcements, isLoading: isLoadingAnnouncements } =
+    useCollection<Announcement>(announcementsQuery);
+  const { data: complaints, isLoading: isLoadingComplaints } =
+    useCollection<Complaint>(complaintsQuery);
+
   return (
     <>
       <PageHeader title="Dashboard" />
@@ -167,21 +197,31 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {announcements.map((ann) => (
-                  <div key={ann.id} className="flex items-start gap-4">
-                    <div className="bg-primary/10 p-2 rounded-full">
-                      <Bell className="h-5 w-5 text-primary-foreground" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium leading-none">
-                        {ann.title}
-                      </p>
-                      <p className="text-sm text-muted-foreground whitespace-normal">
-                        {ann.content}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                {isLoadingAnnouncements
+                  ? Array.from({ length: 3 }).map((_, i) => (
+                      <div key={i} className="flex items-start gap-4">
+                        <Skeleton className="h-10 w-10 rounded-full" />
+                        <div className="space-y-2">
+                          <Skeleton className="h-4 w-[250px]" />
+                          <Skeleton className="h-4 w-[200px]" />
+                        </div>
+                      </div>
+                    ))
+                  : announcements?.map((ann) => (
+                      <div key={ann.id} className="flex items-start gap-4">
+                        <div className="bg-primary/10 p-2 rounded-full">
+                          <Bell className="h-5 w-5 text-primary-foreground" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium leading-none">
+                            {ann.title}
+                          </p>
+                          <p className="text-sm text-muted-foreground whitespace-normal">
+                            {ann.content}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
               </div>
             </CardContent>
           </Card>
@@ -206,44 +246,64 @@ export default function DashboardPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Student</TableHead>
-                  <TableHead>Category</TableHead>
+                  <TableHead>Complaint</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Date</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {complaints.map((complaint) => (
-                  <TableRow key={complaint.id}>
-                    <TableCell>
-                      <div className="font-medium">{complaint.studentName}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {complaint.roomNumber}
-                      </div>
-                    </TableCell>
-                    <TableCell>{complaint.category}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          complaint.status === 'Resolved'
-                            ? 'default'
-                            : complaint.status === 'In Progress'
-                              ? 'secondary'
-                              : 'destructive'
-                        }
-                        className={
-                          complaint.status === 'Resolved'
-                            ? 'bg-green-100 text-green-800'
-                            : ''
-                        }
-                      >
-                        {complaint.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {complaint.date}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {isLoadingComplaints
+                  ? Array.from({ length: 5 }).map((_, i) => (
+                      <TableRow key={i}>
+                        <TableCell>
+                          <Skeleton className="h-4 w-32" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-4 w-48" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-6 w-20" />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Skeleton className="h-4 w-24 ml-auto" />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  : complaints?.map((complaint) => (
+                      <TableRow key={complaint.id}>
+                        <TableCell>
+                          <div className="font-medium">
+                            {complaint.studentName}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {complaint.roomNumber}
+                          </div>
+                        </TableCell>
+                        <TableCell>{complaint.complaintText}</TableCell>
+                        <TableCell>
+                           <Badge
+                            variant="outline"
+                            className={cn(
+                              'capitalize',
+                              complaint.status === 'resolved' &&
+                                'bg-green-100 text-green-800 border-green-200',
+                              complaint.status === 'in progress' &&
+                                'bg-amber-100 text-amber-800 border-amber-200',
+                              complaint.status === 'open' &&
+                                'bg-red-100 text-red-800 border-red-200'
+                            )}
+                          >
+                            {complaint.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {format(
+                            new Date(complaint.submissionDate),
+                            'MMM d, yyyy'
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
               </TableBody>
             </Table>
           </CardContent>
