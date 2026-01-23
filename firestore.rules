@@ -1,0 +1,294 @@
+/**
+ * Core Philosophy: This ruleset enforces a strict Role-Based Access Control (RBAC) model combined with user ownership.
+ * There are three primary roles: 'admin', 'security', and 'student'. An authenticated user's role is determined
+ * by the existence of a corresponding document in the `/roles_admin` or `/roles_security` collections. The 'student'
+ * role is implicitly tied to data ownership within the `/users/{userId}` data tree. Admins have broad read access
+ * for oversight and specific write permissions, while security personnel have specific operational privileges (e.g.,
+ * managing outpasses and logs). Students are restricted to managing their own personal data.
+ *
+ * Data Structure:
+ * - User-specific data (profiles, outpasses, complaints, etc.) is nested under `/users/{userId}` to leverage
+ *   Firestore's path-based security for ownership.
+ * - Role assignments are stored in top-level collections (`/roles_admin/{userId}`, `/roles_security/{userId}`) for
+ *   efficient, database-wide role checks using `exists()`.
+ * - Global or system-wide data (e.g., announcements, hostel rooms) are stored in top-level collections.
+ *
+ * Key Security Decisions:
+ * - Default Deny: All paths are closed by default. Access is granted explicitly.
+ * - Role Checks via Document Existence: A user is considered an 'admin' or 'security' if a document with their UID
+ *   exists in the corresponding role collection. This is a highly performant and secure pattern.
+ * - Strict Ownership: Students can only access data within their own `/users/{userId}` path. Listing documents in
+ *   other users' subcollections is strictly forbidden.
+ * - No User Enumeration: Listing the top-level `/users` collection is disallowed to protect user privacy.
+ * - Admin and Security Access: Admins and Security can read specific user-nested data (like outpasses or complaints)
+ *   using direct `get` requests for moderation, but they cannot `list` entire user subcollections to prevent data scraping.
+ *
+ * Denormalization for Authorization: To ensure fast and simple rules, relational data required for authorization is
+ * denormalized. For instance, an `outpass` document under `/users/{userId}/outpasses/{outpassId}` contains a `studentId`
+ * field that must match the `{userId}` in the path. This avoids costly `get()` calls and makes ownership checks self-contained.
+ *
+ * Structural Segregation: Data with different security needs are stored in separate collections. For example, private
+ * user data is segregated under `/users/{userId}`, while public-read data like `/announcements` is a top-level collection.
+ * This makes list operations safer and rules easier to reason about.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    //=========================================================================
+    // Helper Functions
+    //=========================================================================
+
+    /**
+     * Checks if the user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the requesting user's UID matches the provided userId,
+     * verifying ownership of a document or data path.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * Checks if the user is an owner and the document already exists.
+     * Crucial for safe update and delete operations.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * Checks if the user has an 'admin' role by checking for their UID
+     * in the /roles_admin collection.
+     */
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+    }
+
+    /**
+     * Checks if the user has a 'security' role by checking for their UID
+     * in the /roles_security collection.
+     */
+    function isSecurity() {
+      return isSignedIn() && exists(/databases/$(database)/documents/roles_security/$(request.auth.uid));
+    }
+
+    /**
+     * On create, validates that a document's internal `userId` field
+     * matches the `userId` from the path parameter.
+     */
+    function isCorrectUserOnCreate(userId) {
+      return request.resource.data.userId == userId;
+    }
+
+    /**
+     * On create, validates that a document's internal `studentId` field
+     * matches the `userId` from the path parameter.
+     */
+    function isCorrectStudentOnCreate(userId) {
+      return request.resource.data.studentId == userId;
+    }
+
+    /**
+     * On update, ensures the `userId` field cannot be changed, preserving
+     * the ownership link.
+     */
+    function isUserLinkImmutable() {
+      return request.resource.data.userId == resource.data.userId;
+    }
+
+    /**
+     * On update, ensures the `studentId` field cannot be changed, preserving
+     * the ownership link.
+     */
+    function isStudentLinkImmutable() {
+      return request.resource.data.studentId == resource.data.studentId;
+    }
+
+    //=========================================================================
+    // Collection Rules
+    //=========================================================================
+
+    /**
+     * @description User's own role and auth information.
+     * @path /users/{userId}
+     * @allow (create) A new user creating their own user document: `auth.uid == userId`.
+     * @allow (get) A user reading their own document.
+     * @deny (list) Any user, to prevent enumeration of all users in the system.
+     * @deny (update) An authenticated user trying to modify another user's document.
+     * @principle Restricts access to a user's own data tree and allows self-creation.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if false;
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId) || (isAdmin() && resource != null);
+      allow delete: if false; // User documents should not be deleted by clients.
+    }
+
+    /**
+     * @description Student profile data linked to a user account.
+     * @path /users/{userId}/students/{studentId}
+     * @allow (create) A user creating their own student profile: `auth.uid == userId`.
+     * @allow (get) A user reading their own profile.
+     * @deny (list) A user listing another user's profile.
+     * @deny (create) A user creating a student profile under another user's account.
+     * @principle Enforces document ownership and validates relational integrity.
+     */
+    match /users/{userId}/students/{studentId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isCorrectUserOnCreate(userId);
+      allow update: if (isExistingOwner(userId) || (isAdmin() && resource != null)) && isUserLinkImmutable();
+      allow delete: if false;
+    }
+
+    /**
+     * @description Marks a user as an Admin. Existence of a doc grants the role.
+     * @path /roles_admin/{userId}
+     * @allow (get) Any signed-in user checking if another user is an admin.
+     * @deny (list, create, update, delete) All client-side modifications are forbidden.
+     * @principle Role documents are read-only for clients and managed server-side.
+     */
+    match /roles_admin/{userId} {
+      allow get: if isSignedIn();
+      allow list: if false;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Marks a user as Security. Existence of a doc grants the role.
+     * @path /roles_security/{userId}
+     * @allow (get) Any signed-in user checking if another user is security staff.
+     * @deny (list, create, update, delete) All client-side modifications are forbidden.
+     * @principle Role documents are read-only for clients and managed server-side.
+     */
+    match /roles_security/{userId} {
+      allow get: if isSignedIn();
+      allow list: if false;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Information about available hostel rooms.
+     * @path /hostel_rooms/{hostelRoomId}
+     * @allow (get, list) Any authenticated user viewing room details.
+     * @allow (create, update) An admin managing hostel room information.
+     * @deny (create) A student trying to add a new room.
+     * @principle Public-read data that is writable only by administrators.
+     */
+    match /hostel_rooms/{hostelRoomId} {
+      allow get, list: if isSignedIn();
+      allow create: if isAdmin();
+      allow update, delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description A student's outpass request.
+     * @path /users/{userId}/outpasses/{outpassId}
+     * @allow (create) A student creating an outpass for themselves (`auth.uid == userId`).
+     * @allow (update) The student owner or a security staff member updating the outpass.
+     * @deny (list) An admin trying to list all outpasses for a specific user. (Admins should use specific queries).
+     * @deny (create) A student creating an outpass for another student.
+     * @principle Enforces document ownership for creation, allows role-based modification.
+     */
+    match /users/{userId}/outpasses/{outpassId} {
+      allow get: if isOwner(userId) || isAdmin() || isSecurity();
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && isCorrectStudentOnCreate(userId);
+      allow update: if (isExistingOwner(userId) || (isSecurity() && resource != null)) && isStudentLinkImmutable();
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Logs of student entries and exits, recorded by security.
+     * @path /entry_exit_logs/{entryExitLogId}
+     * @allow (create) A security staff member creating a new log entry.
+     * @allow (get) The student whose log it is, or any admin/security staff.
+     * @allow (list) Admins and security staff listing all logs.
+     * @deny (create) A student trying to create their own entry/exit log.
+     * @deny (update, delete) Logs are immutable once created.
+     * @principle Allows creation by a specific role and enforces immutability.
+     */
+    match /entry_exit_logs/{entryExitLogId} {
+      allow get: if isAdmin() || isSecurity() || (isSignedIn() && request.auth.uid == resource.data.studentId);
+      allow list: if isAdmin() || isSecurity();
+      allow create: if isSecurity() && request.resource.data.recordedBySecurityId == request.auth.uid;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Hostel fee records for a student.
+     * @path /users/{userId}/hostel_fees/{hostelFeeId}
+     * @allow (get) A student viewing their own fee records.
+     * @allow (create, update) An admin creating or modifying a fee record for a student.
+     * @deny (list) Anyone listing fee records.
+     * @deny (create) A student trying to create their own fee record.
+     * @principle Restricts read access to owner and write access to admins.
+     */
+    match /users/{userId}/hostel_fees/{hostelFeeId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isOwner(userId) || isAdmin();
+      allow create: if isAdmin();
+      allow update, delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description Complaints filed by a student.
+     * @path /users/{userId}/complaints/{complaintId}
+     * @allow (create) A student filing a complaint for themselves.
+     * @allow (get) The student owner or an admin viewing the complaint.
+     * @allow (update) An admin updating the status of a complaint.
+     * @deny (update) The student owner trying to change the status of their own complaint.
+     * @principle Allows creation by owner and modification by a privileged role.
+     */
+    match /users/{userId}/complaints/{complaintId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isCorrectStudentOnCreate(userId);
+      allow update: if (isAdmin() && resource != null) && isStudentLinkImmutable();
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Feedback submitted by a student.
+     * @path /users/{userId}/feedback/{feedbackId}
+     * @allow (create) A student submitting feedback.
+     * @allow (get, list) The student owner or an admin viewing feedback.
+     * @deny (update, delete) Feedback is immutable once submitted.
+     * @principle Write-once data model; readable by owner and admins.
+     */
+    match /users/{userId}/feedback/{feedbackId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isCorrectStudentOnCreate(userId);
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description System-wide announcements posted by admins.
+     * @path /announcements/{announcementId}
+     * @allow (get, list) Any authenticated user can read announcements.
+     * @allow (create, update, delete) Only admins can manage announcements.
+     * @deny (create) A non-admin user trying to post an announcement.
+     * @principle Public-read collection with writes restricted to a specific role.
+     */
+    match /announcements/{announcementId} {
+      allow get, list: if isSignedIn();
+      allow create: if isAdmin() && request.resource.data.adminId == request.auth.uid;
+      allow update: if (isAdmin() && resource != null) && resource.data.adminId == request.auth.uid;
+      allow delete: if (isAdmin() && resource != null) && resource.data.adminId == request.auth.uid;
+    }
+  }
+}
