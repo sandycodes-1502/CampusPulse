@@ -12,14 +12,13 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useAuth } from '@/firebase';
+import { useAuth, useUser } from '@/firebase';
 import {
   initiateEmailSignIn,
   initiateGoogleSignIn,
@@ -37,6 +36,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
@@ -49,6 +51,16 @@ type FormSchema = z.infer<typeof formSchema>;
 
 export default function LoginPage() {
   const auth = useAuth();
+  const { user, isUserLoading } = useUser();
+  const router = useRouter();
+  const [role, setRole] = useState('student');
+
+  useEffect(() => {
+    if (!isUserLoading && user) {
+      router.push('/dashboard');
+    }
+  }, [user, isUserLoading, router]);
+
   const form = useForm<FormSchema>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -66,8 +78,23 @@ export default function LoginPage() {
 
   const handleGoogleSignIn = () => {
     if (!auth) return;
+    sessionStorage.setItem('signupRole', role);
     initiateGoogleSignIn(auth);
   };
+
+  if (isUserLoading || (!isUserLoading && user)) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Skeleton className="h-12 w-12 rounded-full" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-[250px]" />
+            <Skeleton className="h-4 w-[200px]" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen flex-col items-center justify-center">
@@ -84,7 +111,7 @@ export default function LoginPage() {
         <CardContent>
           <div className="space-y-2 mb-4">
             <Label htmlFor="role">I am a</Label>
-            <Select defaultValue="student">
+            <Select defaultValue={role} onValueChange={setRole}>
               <SelectTrigger id="role" className="w-full">
                 <SelectValue placeholder="Select your role" />
               </SelectTrigger>
@@ -181,4 +208,3 @@ export default function LoginPage() {
     </div>
   );
 }
-    
