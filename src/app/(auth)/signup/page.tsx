@@ -79,7 +79,8 @@ export default function SignupPage() {
 
   const handleGoogleSignIn = () => {
     if (!auth) return;
-    sessionStorage.setItem('signupRole', 'student');
+    const role = form.getValues('role');
+    sessionStorage.setItem('signupRole', role);
     sessionStorage.removeItem('signupName'); // Name will be picked from Google profile
     initiateGoogleSignIn(auth);
   };
@@ -233,4 +234,3 @@ export default function SignupPage() {
     </div>
   );
 }
-    
