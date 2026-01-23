@@ -5,8 +5,7 @@ import {
   query,
   orderBy,
   doc,
-  updateDoc,
-  where,
+  collectionGroup,
 } from 'firebase/firestore';
 import { MoreHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -49,19 +48,18 @@ export default function ComplaintsPage() {
   const { user, role } = useUserRole();
 
   const complaintsQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user || !role) return null;
 
     if (role === 'student') {
       return query(
-        collection(firestore, 'complaints'),
-        where('studentId', '==', user.uid),
+        collection(firestore, 'users', user.uid, 'complaints'),
         orderBy('submissionDate', 'desc')
       );
     }
 
     if (role === 'admin') {
       return query(
-        collection(firestore, 'complaints'),
+        collectionGroup(firestore, 'complaints'),
         orderBy('submissionDate', 'desc')
       );
     }
@@ -73,11 +71,11 @@ export default function ComplaintsPage() {
     useCollection<Complaint>(complaintsQuery);
 
   const handleStatusChange = (
-    id: string,
+    complaint: Complaint,
     status: 'in progress' | 'resolved'
   ) => {
     if (!firestore) return;
-    const complaintRef = doc(firestore, 'complaints', id);
+    const complaintRef = doc(firestore, 'users', complaint.studentId, 'complaints', complaint.id);
     updateDocumentNonBlocking(complaintRef, { status });
     toast({ title: `Complaint status updated to ${status}.` });
   };
@@ -204,7 +202,7 @@ export default function ComplaintsPage() {
                               <DropdownMenuItem
                                 onClick={() =>
                                   handleStatusChange(
-                                    complaint.id,
+                                    complaint,
                                     'in progress'
                                   )
                                 }
@@ -213,7 +211,7 @@ export default function ComplaintsPage() {
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() =>
-                                  handleStatusChange(complaint.id, 'resolved')
+                                  handleStatusChange(complaint, 'resolved')
                                 }
                               >
                                 Mark as Resolved
@@ -233,3 +231,4 @@ export default function ComplaintsPage() {
     </>
   );
 }
+    

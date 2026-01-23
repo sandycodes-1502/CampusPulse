@@ -525,14 +525,18 @@
         }
       },
       {
-        "path": "/outpasses/{outpassId}",
+        "path": "/users/{userId}/outpasses/{outpassId}",
         "definition": {
           "entityName": "Outpass",
           "schema": {
             "$ref": "#/backend/entities/Outpass"
           },
-          "description": "Stores outpass requests. This is a top-level collection for easier querying by admins and security.",
+          "description": "Stores a student's outpass requests. The `userId` must match the `studentId` on the document.",
           "params": [
+            {
+              "name": "userId",
+              "description": "The Firebase Authentication UID of the user."
+            },
             {
               "name": "outpassId",
               "description": "The unique ID of the outpass request."
@@ -557,14 +561,18 @@
         }
       },
       {
-        "path": "/hostel_fees/{hostelFeeId}",
+        "path": "/users/{userId}/hostel_fees/{hostelFeeId}",
         "definition": {
           "entityName": "HostelFee",
           "schema": {
             "$ref": "#/backend/entities/HostelFee"
           },
-          "description": "Stores hostel fee information. This is a top-level collection for easier querying by admins.",
+          "description": "Stores a student's hostel fee records.",
           "params": [
+            {
+              "name": "userId",
+              "description": "The Firebase Authentication UID of the user."
+            },
             {
               "name": "hostelFeeId",
               "description": "The unique ID of the hostel fee record."
@@ -573,14 +581,18 @@
         }
       },
       {
-        "path": "/complaints/{complaintId}",
+        "path": "/users/{userId}/complaints/{complaintId}",
         "definition": {
           "entityName": "Complaint",
           "schema": {
             "$ref": "#/backend/entities/Complaint"
           },
-          "description": "Stores complaints submitted by students. This is a top-level collection for easier querying by admins.",
+          "description": "Stores a student's complaints.",
           "params": [
+            {
+              "name": "userId",
+              "description": "The Firebase Authentication UID of the user."
+            },
             {
               "name": "complaintId",
               "description": "The unique ID of the complaint."
@@ -589,14 +601,18 @@
         }
       },
       {
-        "path": "/feedback/{feedbackId}",
+        "path": "/users/{userId}/feedback/{feedbackId}",
         "definition": {
           "entityName": "Feedback",
           "schema": {
             "$ref": "#/backend/entities/Feedback"
           },
-          "description": "Stores feedback submitted by students. This is a top-level collection for easier querying by admins.",
+          "description": "Stores a student's feedback submissions.",
           "params": [
+            {
+              "name": "userId",
+              "description": "The Firebase Authentication UID of the user."
+            },
             {
               "name": "feedbackId",
               "description": "The unique ID of the feedback."
@@ -624,3 +640,4 @@
     "reasoning": "The Firestore structure is designed to provide a secure, scalable, and easily maintainable system for CampusPulse, focusing on authorization independence and clear access patterns. User roles (student, admin, security) are managed using dedicated collections for each role, with user authentication handled by Firebase Authentication. Data is structured to support efficient querying and minimize the need for complex security rules.\\n\\n**Authorization Independence (CRITICAL):**  Authorization is achieved through a combination of path-based ownership and membership maps, denormalized where necessary to avoid `get()` calls in security rules. For example, Outpass documents are stored under `/users/{userId}/outpasses/{outpassId}`, and the studentId is redundantly stored on the document itself. Any security rules needing to check studentId only need to read the document itself and `request.auth.uid`.\\n\\n**Structural Segregation (Homogeneous Security Posture):** Data with different access requirements is stored in separate collections. User profiles (Student, Security, Admin) are stored in their respective collections, ensuring that security rules for each role are specific and clear.\\n\\n**Access Modeling (Standardization and Consistency):**\\n*   **Private Data:** User-specific data (e.g., Outpasses, Complaints, Feedback) is stored under the `/users/{userId}` path, ensuring that only the user has access to their data.  The userId is redundantly stored on the document itself.\\n*   **Global Roles (DBAC):** Dedicated collections `/roles_admin/{uid}`, `/roles_security/{uid}` are used to define admin and security roles. The existence of a document in these collections grants the corresponding role. Student role is implicit in the users/{uid}/students/{studentId} structure.\\n\\n**QAPs Support:**\\n*   Secure `list` operations are supported by the structural segregation. For example, listing outpasses is restricted to the owner using the path `/users/{userId}/outpasses`. Admins can list all outpasses but only if they have a document present at `/roles_admin/{userId}`\\n\\nInvariants such as ownership, timestamps, and denormalized data can be enforced through Firestore security rules and server-side functions.\\n\\nThis structure facilitates simple, robust, and easily debuggable security rules, aligning with the core design principles and strategy mandates."
   }
 }
+    

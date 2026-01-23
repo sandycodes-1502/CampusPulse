@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, collectionGroup } from 'firebase/firestore';
 
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { useUserRole } from '@/hooks/use-user-role';
@@ -24,15 +24,14 @@ export default function FeesPage() {
   const firestore = useFirestore();
 
   const feesQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user || !role) return null;
     if (role === 'student') {
       return query(
-        collection(firestore, 'hostel_fees'),
-        where('studentId', '==', user.uid)
+        collection(firestore, 'users', user.uid, 'hostel_fees')
       );
     }
     if (role === 'admin') {
-      return query(collection(firestore, 'hostel_fees'));
+      return query(collectionGroup(firestore, 'hostel_fees'));
     }
     return null;
   }, [firestore, user, role]);
@@ -117,3 +116,4 @@ export default function FeesPage() {
     </>
   );
 }
+    

@@ -3,10 +3,9 @@
 import {
   collection,
   query,
-  where,
   orderBy,
   doc,
-  updateDoc,
+  collectionGroup,
 } from 'firebase/firestore';
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import Link from 'next/link';
@@ -51,23 +50,28 @@ export default function OutpassPage() {
   const { toast } = useToast();
 
   const outpassesQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user || !role) return null;
+    
     if (role === 'student') {
       return query(
-        collection(firestore, 'outpasses'),
-        where('studentId', '==', user.uid),
+        collection(firestore, 'users', user.uid, 'outpasses'),
         orderBy('departureDateTime', 'desc')
       );
     }
-    // Admin and Security can see all outpasses
-    return query(collection(firestore, 'outpasses'), orderBy('departureDateTime', 'desc'));
+    
+    // Admin and Security can see all outpasses via a collection group query.
+    if (role === 'admin' || role === 'security') {
+      return query(collectionGroup(firestore, 'outpasses'), orderBy('departureDateTime', 'desc'));
+    }
+    
+    return null;
   }, [firestore, user, role]);
 
   const { data: outpasses, isLoading } = useCollection<Outpass>(outpassesQuery);
 
-  const handleStatusChange = (id: string, status: 'approved' | 'rejected') => {
-    if (!firestore) return;
-    const outpassRef = doc(firestore, 'outpasses', id);
+  const handleStatusChange = (outpass: Outpass, status: 'approved' | 'rejected' | 'used') => {
+    if (!firestore || !outpass.studentId) return;
+    const outpassRef = doc(firestore, 'users', outpass.studentId, 'outpasses', outpass.id);
     updateDocumentNonBlocking(outpassRef, { status });
     toast({ title: `Outpass has been ${status}.` });
   };
@@ -132,15 +136,12 @@ export default function OutpassPage() {
                       <TableCell className="hidden md:table-cell">
                         <div className="font-medium">{outpass.studentName}</div>
                         <div className="text-sm text-muted-foreground">
-                          {outpass.studentId} &middot; {outpass.roomNumber}
+                          {outpass.roomNumber}
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="font-medium md:hidden">{outpass.studentName}</div>
-                        <div className="font-medium">{outpass.destination}</div>
-                        <div className="text-sm text-muted-foreground truncate max-w-[200px] sm:max-w-xs">
-                          {outpass.reason}
-                        </div>
+                        <div className="font-medium">{outpass.reason}</div>
                       </TableCell>
                       <TableCell className="hidden sm:table-cell">
                         {format(new Date(outpass.departureDateTime), 'dd MMM yyyy, p')} -{' '}
@@ -170,8 +171,8 @@ export default function OutpassPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem onClick={() => handleStatusChange(outpass.id, 'approved')}>Approve</DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleStatusChange(outpass.id, 'rejected')}>Reject</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleStatusChange(outpass, 'approved')}>Approve</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleStatusChange(outpass, 'rejected')}>Reject</DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -187,3 +188,4 @@ export default function OutpassPage() {
     </>
   );
 }
+    

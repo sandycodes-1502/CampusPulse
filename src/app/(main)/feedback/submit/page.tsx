@@ -61,7 +61,9 @@ export default function SubmitFeedbackPage() {
   function onSubmit(data: FeedbackFormValues) {
     if (!firestore || !user) return;
 
-    addDocumentNonBlocking(collection(firestore, 'feedback'), {
+    const feedbackCollectionRef = collection(firestore, 'users', user.uid, 'feedback');
+
+    addDocumentNonBlocking(feedbackCollectionRef, {
       studentId: user.uid,
       studentName: user.displayName,
       feedbackText: data.feedback,
@@ -170,3 +172,4 @@ export default function SubmitFeedbackPage() {
     </>
   );
 }
+    

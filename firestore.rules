@@ -114,172 +114,98 @@ service cloud.firestore {
     // Collection Rules
     //=========================================================================
 
-    /**
-     * @description User's own role and auth information.
-     * @path /users/{userId}
-     * @allow (create) A new user creating their own user document: `auth.uid == userId`.
-     * @allow (get) A user reading their own document.
-     * @deny (list) Any user, to prevent enumeration of all users in the system.
-     * @deny (update) An authenticated user trying to modify another user's document.
-     * @principle Restricts access to a user's own data tree and allows self-creation.
-     */
     match /users/{userId} {
       allow get: if isOwner(userId) || isAdmin();
       allow list: if false;
       allow create: if isOwner(userId);
       allow update: if isExistingOwner(userId) || (isAdmin() && resource != null);
-      allow delete: if false; // User documents should not be deleted by clients.
-    }
-    
-    /**
-     * @description Collection group rule for querying across all students.
-     * @path /{path=**}/students/{studentId}
-     * @allow (get, list) An admin can list or get any student document.
-     * @principle Enables admin-level queries across all users for management purposes.
-     */
-    match /{path=**}/students/{studentId} {
-      allow get, list: if isAdmin();
-    }
-
-    /**
-     * @description Student profile data linked to a user account.
-     * @path /users/{userId}/students/{studentId}
-     * @allow (create) A user creating their own student profile: `auth.uid == userId`.
-     * @allow (get) A user reading their own profile.
-     * @deny (list) A user listing another user's profile.
-     * @deny (create) A user creating a student profile under another user's account.
-     * @principle Enforces document ownership and validates relational integrity.
-     */
-    match /users/{userId}/students/{studentId} {
-      allow get: if isOwner(userId) || isAdmin();
-      allow list: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId) && isCorrectUserOnCreate(userId);
-      allow update: if (isExistingOwner(userId) || (isAdmin() && resource != null)) && isUserLinkImmutable();
       allow delete: if false;
+
+      match /students/{studentId} {
+        allow get: if isOwner(userId) || isAdmin();
+        allow list: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isCorrectUserOnCreate(userId);
+        allow update: if (isExistingOwner(userId) || (isAdmin() && resource != null)) && isUserLinkImmutable();
+        allow delete: if false;
+      }
+      
+      match /outpasses/{outpassId} {
+        allow create: if isOwner(userId) && isCorrectStudentOnCreate(userId);
+        allow update: if isOwner(userId) && resource.data.status == 'pending' && isStudentLinkImmutable();
+        allow read, delete: if isOwner(userId);
+      }
+      
+      match /complaints/{complaintId} {
+        allow create: if isOwner(userId) && isCorrectStudentOnCreate(userId);
+        allow read, delete: if isOwner(userId);
+        allow update: if false; // Only admins can update via collection group
+      }
+
+      match /feedback/{feedbackId} {
+        allow create: if isOwner(userId) && isCorrectStudentOnCreate(userId);
+        allow read: if isOwner(userId);
+        allow update, delete: if false; // Immutable
+      }
+      
+      match /hostel_fees/{hostelFeeId} {
+        allow read: if isOwner(userId);
+        allow create, update, delete: if false; // Only admins can write via collection group
+      }
     }
 
-    /**
-     * @description Marks a user as an Admin. Existence of a doc grants the role.
-     * @path /roles_admin/{userId}
-     * @allow (get) Any signed-in user checking if another user is an admin.
-     * @deny (list, create, update, delete) All client-side modifications are forbidden.
-     * @principle Role documents are read-only for clients and managed server-side.
-     */
     match /roles_admin/{userId} {
       allow get: if isSignedIn();
-      allow list: if false;
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
+      allow list, create, update, delete: if false;
     }
 
-    /**
-     * @description Marks a user as Security. Existence of a doc grants the role.
-     * @path /roles_security/{userId}
-     * @allow (get) Any signed-in user checking if another user is security staff.
-     * @deny (list, create, update, delete) All client-side modifications are forbidden.
-     * @principle Role documents are read-only for clients and managed server-side.
-     */
     match /roles_security/{userId} {
       allow get: if isSignedIn();
-      allow list: if false;
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
+      allow list, create, update, delete: if false;
     }
 
-    /**
-     * @description Information about available hostel rooms.
-     * @path /hostel_rooms/{hostelRoomId}
-     * @allow (get, list) Any authenticated user viewing room details.
-     * @allow (create, update) An admin managing hostel room information.
-     * @deny (create) A student trying to add a new room.
-     * @principle Public-read data that is writable only by administrators.
-     */
     match /hostel_rooms/{hostelRoomId} {
       allow get, list: if isSignedIn();
-      allow create: if isAdmin();
-      allow update, delete: if isAdmin() && resource != null;
+      allow create, update, delete: if isAdmin() && resource != null;
     }
 
-    /**
-     * @description A student's outpass request. Top-level for querying.
-     * @path /outpasses/{outpassId}
-     * @principle Students can manage their own requests, while security/admins can manage all.
-     */
-    match /outpasses/{outpassId} {
-      allow get: if isOwner(resource.data.studentId) || isSecurity() || isAdmin();
-      allow create: if isOwner(request.resource.data.studentId);
-      allow update: if (isOwner(resource.data.studentId) && resource.data.status == 'pending' && isStudentLinkImmutable()) ||
-                        (isSecurity() && resource != null) ||
-                        (isAdmin() && resource != null);
-      allow delete: if isOwner(resource.data.studentId) && resource.data.status == 'pending';
-    }
-
-    /**
-     * @description Logs of student entries and exits, recorded by security.
-     * @path /entry_exit_logs/{entryExitLogId}
-     * @allow (create) A security staff member creating a new log entry.
-     * @allow (get) The student whose log it is, or any admin/security staff.
-     * @allow (list) Admins and security staff listing all logs.
-     * @deny (create) A student trying to create their own entry/exit log.
-     * @deny (update, delete) Logs are immutable once created.
-     * @principle Allows creation by a specific role and enforces immutability.
-     */
     match /entry_exit_logs/{entryExitLogId} {
       allow get: if isAdmin() || isSecurity() || (isSignedIn() && request.auth.uid == resource.data.studentId);
       allow list: if isAdmin() || isSecurity();
       allow create: if isSecurity() && request.resource.data.recordedBySecurityId == request.auth.uid;
-      allow update: if false;
-      allow delete: if false;
+      allow update, delete: if false;
     }
 
-    /**
-     * @description Hostel fee records for a student. Top-level for querying.
-     * @path /hostel_fees/{hostelFeeId}
-     * @principle Students can read their own, admins can manage all.
-     */
-    match /hostel_fees/{hostelFeeId} {
-      allow get: if isOwner(resource.data.studentId) || isAdmin();
-      allow create, update, delete: if isAdmin();
-    }
-
-    /**
-     * @description Complaints filed by a student. Top-level for querying.
-     * @path /complaints/{complaintId}
-     * @principle Students can manage their own, admins can manage all.
-     */
-    match /complaints/{complaintId} {
-      allow get: if isOwner(resource.data.studentId) || isAdmin();
-      allow create: if isOwner(request.resource.data.studentId);
-      allow update: if isAdmin() && resource != null;
-      allow delete: if isOwner(resource.data.studentId);
-    }
-
-    /**
-     * @description Feedback submitted by a student. Top-level for querying.
-     * @path /feedback/{feedbackId}
-     * @principle Students create their own, admins can read all. Immutable.
-     */
-    match /feedback/{feedbackId} {
-        allow get: if isOwner(resource.data.studentId) || isAdmin();
-        allow create: if isOwner(request.resource.data.studentId);
-        allow update, delete: if false;
-    }
-
-    /**
-     * @description System-wide announcements posted by admins.
-     * @path /announcements/{announcementId}
-     * @allow (get, list) Any authenticated user can read announcements.
-     * @allow (create, update, delete) Only admins can manage announcements.
-     * @deny (create) A non-admin user trying to post an announcement.
-     * @principle Public-read collection with writes restricted to a specific role.
-     */
     match /announcements/{announcementId} {
       allow get, list: if isSignedIn();
       allow create: if isAdmin() && request.resource.data.adminId == request.auth.uid;
       allow update: if (isAdmin() && resource != null) && resource.data.adminId == request.auth.uid;
       allow delete: if (isAdmin() && resource != null) && resource.data.adminId == request.auth.uid;
     }
+    
+    //=========================================================================
+    // Collection Group Rules
+    //=========================================================================
+    
+    match /{path=**}/students/{studentId} {
+      allow get, list: if isAdmin();
+    }
+    
+    match /{path=**}/outpasses/{outpassId} {
+      allow get, list: if isAdmin() || isSecurity();
+      allow update: if (isAdmin() || isSecurity()) && resource != null;
+    }
+    
+    match /{path=**}/complaints/{complaintId} {
+      allow get, list, update: if isAdmin();
+    }
+    
+    match /{path=**}/hostel_fees/{hostelFeeId} {
+      allow get, list, create, update, delete: if isAdmin();
+    }
+    
+    match /{path=**}/feedback/{feedbackId} {
+      allow get, list: if isAdmin();
+    }
   }
 }
+    

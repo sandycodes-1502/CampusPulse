@@ -94,7 +94,7 @@ export default function AdminDashboardPage() {
   const complaintsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
-      collection(firestore, 'complaints'),
+      collectionGroup(firestore, 'complaints'),
       orderBy('submissionDate', 'desc'),
       limit(5)
     );
@@ -113,7 +113,7 @@ export default function AdminDashboardPage() {
   const pendingOutpassesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
-      collection(firestore, 'outpasses'),
+      collectionGroup(firestore, 'outpasses'),
       where('status', '==', 'pending')
     );
   }, [firestore]);
@@ -121,7 +121,7 @@ export default function AdminDashboardPage() {
   const activeComplaintsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
-      collection(firestore, 'complaints'),
+      collectionGroup(firestore, 'complaints'),
       where('status', 'in', ['open', 'in progress'])
     );
   }, [firestore]);
@@ -145,7 +145,7 @@ export default function AdminDashboardPage() {
       students.map((s) => s.hostelRoomId).filter(Boolean)
     );
     return occupiedRoomIds.size;
-  }, [students]);
+  }, [students, rooms]);
 
   const isLoadingStats =
     isLoadingStudents ||
@@ -192,7 +192,7 @@ export default function AdminDashboardPage() {
                 </div>
               )}
               <p className="text-xs text-muted-foreground">
-                {rooms && rooms.length > 0
+                {rooms && rooms.length > 0 && roomsOccupiedCount > 0
                   ? `${Math.round(
                       (roomsOccupiedCount / rooms.length) * 100
                     )}% occupancy rate`
@@ -404,3 +404,4 @@ export default function AdminDashboardPage() {
     </>
   );
 }
+    

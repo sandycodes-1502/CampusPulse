@@ -2,15 +2,17 @@
 
 import { useState } from 'react';
 import {
-  collection,
+  collectionGroup,
   doc,
   addDoc,
-  updateDoc,
   serverTimestamp,
   query,
   where,
   orderBy,
   limit,
+  getDocs,
+  collection,
+  documentId,
 } from 'firebase/firestore';
 import {
   QrCode,
@@ -24,7 +26,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 
-import { useFirestore, useUser, useDoc, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useUser } from '@/firebase';
 import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
 import {
@@ -44,7 +46,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -52,8 +54,9 @@ import type { Outpass, EntryExitLog } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useCollection, useMemoFirebase } from '@/firebase';
 
-type OutpassVerificationResult = (Outpass & { id: string }) | { status: 'Not Found' | 'Not Approved' | 'Used' };
+type OutpassVerificationResult = (Outpass & { id: string }) | { status: 'Not Found' | 'Not Approved' | 'Used' | 'Rejected' };
 
 function OutpassVerification() {
   const firestore = useFirestore();
@@ -65,7 +68,7 @@ function OutpassVerification() {
   const approvedOutpassesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
-      collection(firestore, 'outpasses'),
+      collectionGroup(firestore, 'outpasses'),
       where('status', '==', 'approved'),
       orderBy('departureDateTime', 'desc')
     );
@@ -79,18 +82,19 @@ function OutpassVerification() {
     setVerificationResult(null);
 
     try {
-      const outpassRef = doc(firestore, 'outpasses', outpassId);
-      const { data: outpass, error } = await new Promise<any>((resolve) => {
-        useDoc.fetcher(outpassRef, resolve);
-      });
+      const q = query(collectionGroup(firestore, 'outpasses'), where(documentId(), '==', outpassId), limit(1));
+      const querySnapshot = await getDocs(q);
 
-
-      if (error || !outpass) {
+      if (querySnapshot.empty) {
         setVerificationResult({ status: 'Not Found' });
-      } else if (outpass.status === 'approved') {
-        setVerificationResult(outpass as Outpass & { id: string });
       } else {
-        setVerificationResult({ status: outpass.status === 'used' ? 'Used' : 'Not Approved' });
+        const outpassDoc = querySnapshot.docs[0];
+        const outpass = { id: outpassDoc.id, ...outpassDoc.data() } as Outpass;
+        if (outpass.status === 'approved') {
+          setVerificationResult(outpass);
+        } else {
+          setVerificationResult({ status: outpass.status as 'Not Approved' | 'Used' | 'Rejected' });
+        }
       }
     } catch (e) {
       console.error(e);
@@ -101,9 +105,9 @@ function OutpassVerification() {
     }
   };
 
-  const handleMarkAsUsed = (id: string) => {
-    if (!firestore) return;
-    const outpassRef = doc(firestore, 'outpasses', id);
+  const handleMarkAsUsed = (outpass: Outpass) => {
+    if (!firestore || !outpass.studentId) return;
+    const outpassRef = doc(firestore, 'users', outpass.studentId, 'outpasses', outpass.id);
     updateDocumentNonBlocking(outpassRef, { status: 'used' });
     toast({ title: 'Outpass marked as used.' });
     setVerificationResult(null);
@@ -170,14 +174,14 @@ function OutpassVerification() {
                         <Badge className="w-fit bg-green-100 text-green-800 hover:bg-green-200">Valid & Approved</Badge>
                       </div>
                     </div>
-                    <Button className="w-full" onClick={() => handleMarkAsUsed(verificationResult.id)}>
+                    <Button className="w-full" onClick={() => handleMarkAsUsed(verificationResult)}>
                       <UserCheck className="mr-2 h-4 w-4" />
                       Mark as Used
                     </Button>
                   </div>
                 ) : (
                   <div className="text-center py-4">
-                    <p className="font-semibold text-red-500">{verificationResult.status}</p>
+                    <p className="font-semibold text-red-500 capitalize">{verificationResult.status}</p>
                     <p className="text-sm text-muted-foreground">This outpass is not valid for use.</p>
                   </div>
                 )}
@@ -224,7 +228,7 @@ function OutpassVerification() {
                     </TableCell>
                     <TableCell>{format(new Date(outpass.returnDateTime), 'p, dd MMM')}</TableCell>
                     <TableCell className='text-right'>
-                      <Button variant="outline" size="sm" onClick={() => handleMarkAsUsed(outpass.id)}>Mark Used</Button>
+                      <Button variant="outline" size="sm" onClick={() => handleMarkAsUsed(outpass)}>Mark Used</Button>
                     </TableCell>
                   </TableRow>
                 ))
@@ -384,3 +388,4 @@ export default function SecurityPage() {
     </>
   );
 }
+    
