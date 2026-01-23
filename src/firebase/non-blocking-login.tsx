@@ -43,7 +43,7 @@ export function initiateGoogleSignIn(authInstance: Auth): void {
   const provider = new GoogleAuthProvider();
   // Using signInWithRedirect to avoid popup blocker issues.
   // This will navigate the user to the Google sign-in page and then redirect them back.
-  // The result is handled by the onAuthStateChanged listener in FirebaseProvider.
+  // The result is handled in FirebaseProvider.
   signInWithRedirect(authInstance, provider).catch((error) => {
     // This catch block will handle immediate errors, though most errors with
     // redirect flow are handled after the redirect.

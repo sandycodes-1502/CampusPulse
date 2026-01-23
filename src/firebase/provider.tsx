@@ -11,8 +11,9 @@ import React, {
 } from 'react';
 import { FirebaseApp } from 'firebase/app';
 import { Firestore, doc, getDoc, setDoc } from 'firebase/firestore';
-import { Auth, User, onAuthStateChanged } from 'firebase/auth';
+import { Auth, User, onAuthStateChanged, getRedirectResult } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
+import { toast } from '@/hooks/use-toast';
 
 interface FirebaseProviderProps {
   children: ReactNode;
@@ -76,6 +77,98 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     isUserLoading: true, // Start loading until first auth event
     userError: null,
   });
+
+  // This effect will run once on mount and handle the redirect result.
+  useEffect(() => {
+    if (!auth || !firestore) return;
+
+    const handleRedirect = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result) {
+          // This is the signed-in user from the redirect
+          const firebaseUser = result.user;
+          const userDocRef = doc(firestore, 'users', firebaseUser.uid);
+          const userDocSnap = await getDoc(userDocRef);
+
+          if (!userDocSnap.exists()) {
+            // New user via Google, create their profile documents
+            const role = sessionStorage.getItem('signupRole') || 'student';
+            const name = firebaseUser.displayName || 'New User';
+
+            await setDoc(userDocRef, {
+              id: firebaseUser.uid,
+              email: firebaseUser.email,
+              role: role,
+            });
+
+            if (role === 'student') {
+              const studentDocRef = doc(
+                firestore,
+                'users',
+                firebaseUser.uid,
+                'students',
+                firebaseUser.uid
+              );
+              await setDoc(studentDocRef, {
+                id: firebaseUser.uid,
+                userId: firebaseUser.uid,
+                name: name,
+                email: firebaseUser.email,
+              });
+            } else if (role === 'security') {
+              const securityDocRef = doc(
+                firestore,
+                'roles_security',
+                firebaseUser.uid
+              );
+              await setDoc(securityDocRef, {
+                id: firebaseUser.uid,
+                userId: firebaseUser.uid,
+                name: name,
+                email: firebaseUser.email,
+                employeeId: `EMP-${Math.random()
+                  .toString(36)
+                  .substring(2, 8)
+                  .toUpperCase()}`,
+              });
+            } else if (role === 'admin') {
+              const adminDocRef = doc(
+                firestore,
+                'roles_admin',
+                firebaseUser.uid
+              );
+              await setDoc(adminDocRef, {
+                id: firebaseUser.uid,
+                userId: firebaseUser.uid,
+                name: name,
+                email: firebaseUser.email,
+                employeeId: `ADM-${Math.random()
+                  .toString(36)
+                  .substring(2, 8)
+                  .toUpperCase()}`,
+              });
+            }
+            sessionStorage.removeItem('signupRole');
+            sessionStorage.removeItem('signupName');
+          }
+          // After profile creation, the onAuthStateChanged listener below
+          // will handle setting the user state and triggering redirects.
+        }
+      } catch (error: any) {
+        toast({
+          variant: 'destructive',
+          title: 'Google Sign-In Failed',
+          description: error.message,
+        });
+        setUserAuthState((s) => ({ ...s, isUserLoading: false, userError: error }));
+      }
+    };
+
+    // We only want to process the redirect result when the app first loads.
+    // The existing onAuthStateChanged will handle subsequent user state.
+    handleRedirect();
+  }, [auth, firestore]);
 
   // Effect to subscribe to Firebase auth state changes
   useEffect(() => {
