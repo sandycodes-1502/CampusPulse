@@ -102,32 +102,58 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
             const userDocSnap = await getDoc(userDocRef);
             if (!userDocSnap.exists()) {
               // This is a new user, create their profile documents
-              const studentDocRef = doc(
-                firestore,
-                'users',
-                firebaseUser.uid,
-                'students',
-                firebaseUser.uid
-              );
+              const role = sessionStorage.getItem('signupRole') || 'student';
+              const name =
+                sessionStorage.getItem('signupName') ||
+                firebaseUser.displayName ||
+                'New User';
 
               const userData = {
                 id: firebaseUser.uid,
                 email: firebaseUser.email,
-                role: 'student', // Default role
+                role: role,
               };
-
-              const studentData = {
-                id: firebaseUser.uid,
-                userId: firebaseUser.uid,
-                name: firebaseUser.displayName || 'New Student',
-                email: firebaseUser.email,
-              };
-
-              // Use non-blocking writes to create the documents
               setDocumentNonBlocking(userDocRef, userData, { merge: true });
-              setDocumentNonBlocking(studentDocRef, studentData, {
-                merge: true,
-              });
+
+              if (role === 'student') {
+                const studentDocRef = doc(
+                  firestore,
+                  'users',
+                  firebaseUser.uid,
+                  'students',
+                  firebaseUser.uid
+                );
+                const studentData = {
+                  id: firebaseUser.uid,
+                  userId: firebaseUser.uid,
+                  name: name,
+                  email: firebaseUser.email,
+                };
+                setDocumentNonBlocking(studentDocRef, studentData, {
+                  merge: true,
+                });
+              } else if (role === 'security') {
+                const securityDocRef = doc(
+                  firestore,
+                  'roles_security',
+                  firebaseUser.uid
+                );
+                const securityData = {
+                  id: firebaseUser.uid,
+                  userId: firebaseUser.uid,
+                  name: name,
+                  email: firebaseUser.email,
+                  employeeId: `EMP-${Math.random()
+                    .toString(36)
+                    .substring(2, 8)
+                    .toUpperCase()}`,
+                };
+                setDocumentNonBlocking(securityDocRef, securityData, {
+                  merge: true,
+                });
+              }
+              sessionStorage.removeItem('signupRole');
+              sessionStorage.removeItem('signupName');
             }
           } catch (error) {
             console.error('Error checking or creating user profile:', error);
@@ -244,3 +270,4 @@ export const useUser = (): UserHookResult => {
   const { user, isUserLoading, userError } = useFirebase(); // Leverages the main hook
   return { user, isUserLoading, userError };
 };
+    

@@ -18,6 +18,13 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useAuth } from '@/firebase';
 import {
   initiateEmailSignUp,
@@ -31,11 +38,15 @@ import { z } from 'zod';
 
 const formSchema = z
   .object({
+    name: z.string().min(1, { message: 'Please enter your name' }),
     email: z.string().email({ message: 'Please enter a valid email address' }),
     password: z
       .string()
       .min(8, { message: 'Password must be at least 8 characters long' }),
     confirmPassword: z.string(),
+    role: z.enum(['student', 'security'], {
+      required_error: 'Please select a role.',
+    }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Passwords do not match',
@@ -49,9 +60,11 @@ export default function SignupPage() {
   const form = useForm<FormSchema>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      name: '',
       email: '',
       password: '',
       confirmPassword: '',
+      role: 'student',
     },
   });
 
@@ -59,11 +72,15 @@ export default function SignupPage() {
 
   const onSubmit = (data: FormSchema) => {
     if (!auth) return;
+    sessionStorage.setItem('signupRole', data.role);
+    sessionStorage.setItem('signupName', data.name);
     initiateEmailSignUp(auth, data.email, data.password);
   };
 
   const handleGoogleSignIn = () => {
     if (!auth) return;
+    sessionStorage.setItem('signupRole', 'student');
+    sessionStorage.removeItem('signupName'); // Name will be picked from Google profile
     initiateGoogleSignIn(auth);
   };
 
@@ -76,12 +93,26 @@ export default function SignupPage() {
         <CardHeader>
           <CardTitle>Create an account</CardTitle>
           <CardDescription>
-            Enter your email and password to create an account
+            Enter your details to create an account
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Full Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="John Doe" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <FormField
                 control={form.control}
                 name="email"
@@ -136,6 +167,31 @@ export default function SignupPage() {
                 )}
               />
 
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>I am a</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a role" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="student">Student</SelectItem>
+                        <SelectItem value="security">Security</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <Button
                 type="submit"
                 className="w-full"
@@ -177,3 +233,4 @@ export default function SignupPage() {
     </div>
   );
 }
+    
