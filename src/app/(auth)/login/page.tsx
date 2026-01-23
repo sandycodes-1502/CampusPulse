@@ -18,7 +18,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useAuth } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { initiateGoogleSignIn } from '@/firebase/non-blocking-login';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ChromeIcon } from 'lucide-react';
@@ -36,7 +36,8 @@ import { Label } from '@/components/ui/label';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { getRedirectResult, signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/use-user-role';
 
@@ -51,10 +52,99 @@ type FormSchema = z.infer<typeof formSchema>;
 
 export default function LoginPage() {
   const auth = useAuth();
+  const firestore = useFirestore();
   const { user, role, isLoading } = useUserRole();
   const router = useRouter();
   const { toast } = useToast();
   const [selectedRole, setSelectedRole] = useState('student');
+
+  useEffect(() => {
+    if (!auth || !firestore) return;
+
+    const handleRedirect = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result) {
+          // This is the signed-in user
+          const firebaseUser = result.user;
+          const userDocRef = doc(firestore, 'users', firebaseUser.uid);
+          const userDocSnap = await getDoc(userDocRef);
+
+          if (!userDocSnap.exists()) {
+            // New user via Google, create their profile documents
+            const role = sessionStorage.getItem('signupRole') || 'student';
+            const name = firebaseUser.displayName || 'New User';
+
+            await setDoc(userDocRef, {
+              id: firebaseUser.uid,
+              email: firebaseUser.email,
+              role: role,
+            });
+
+            if (role === 'student') {
+              const studentDocRef = doc(
+                firestore,
+                'users',
+                firebaseUser.uid,
+                'students',
+                firebaseUser.uid
+              );
+              await setDoc(studentDocRef, {
+                id: firebaseUser.uid,
+                userId: firebaseUser.uid,
+                name: name,
+                email: firebaseUser.email,
+              });
+            } else if (role === 'security') {
+              const securityDocRef = doc(
+                firestore,
+                'roles_security',
+                firebaseUser.uid
+              );
+              await setDoc(securityDocRef, {
+                id: firebaseUser.uid,
+                userId: firebaseUser.uid,
+                name: name,
+                email: firebaseUser.email,
+                employeeId: `EMP-${Math.random()
+                  .toString(36)
+                  .substring(2, 8)
+                  .toUpperCase()}`,
+              });
+            } else if (role === 'admin') {
+              const adminDocRef = doc(
+                firestore,
+                'roles_admin',
+                firebaseUser.uid
+              );
+              await setDoc(adminDocRef, {
+                id: firebaseUser.uid,
+                userId: firebaseUser.uid,
+                name: name,
+                email: firebaseUser.email,
+                employeeId: `ADM-${Math.random()
+                  .toString(36)
+                  .substring(2, 8)
+                  .toUpperCase()}`,
+              });
+            }
+            sessionStorage.removeItem('signupRole');
+            sessionStorage.removeItem('signupName');
+          }
+          // After profile creation, the useUserRole hook will get the role,
+          // and the redirect logic below will trigger.
+        }
+      } catch (error: any) {
+        toast({
+          variant: 'destructive',
+          title: 'Google Sign-In Failed',
+          description: error.message,
+        });
+      }
+    };
+
+    handleRedirect();
+  }, [auth, firestore, toast]);
 
   useEffect(() => {
     if (!isLoading && user && role) {
@@ -104,7 +194,8 @@ export default function LoginPage() {
     initiateGoogleSignIn(auth);
   };
 
-  if (isLoading || user) {
+  // Show loading skeleton while checking auth state or creating profile
+  if (isLoading || (user && !role)) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -116,6 +207,12 @@ export default function LoginPage() {
         </div>
       </div>
     );
+  }
+
+  // If user is logged in with a role, they will be redirected by the useEffect.
+  // Return null to prevent the login form from flashing.
+  if (user && role) {
+    return null;
   }
 
   return (

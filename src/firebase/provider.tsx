@@ -94,25 +94,30 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     const unsubscribe = onAuthStateChanged(
       auth,
       async (firebaseUser) => {
-        // Auth state determined
         if (firebaseUser) {
           const userDocRef = doc(firestore, 'users', firebaseUser.uid);
           try {
             const userDocSnap = await getDoc(userDocRef);
-            if (!userDocSnap.exists()) {
-              // This is a new user, create their profile documents
+
+            // Only handle profile creation for NEW email/password users here.
+            // Google Sign-in profile creation is handled on the login/signup pages
+            // via getRedirectResult to avoid race conditions.
+            const isPasswordProvider = firebaseUser.providerData.some(
+              (p) => p.providerId === 'password'
+            );
+
+            if (!userDocSnap.exists() && isPasswordProvider) {
               const role = sessionStorage.getItem('signupRole') || 'student';
               const name =
                 sessionStorage.getItem('signupName') ||
                 firebaseUser.displayName ||
                 'New User';
 
-              const userData = {
+              await setDoc(userDocRef, {
                 id: firebaseUser.uid,
                 email: firebaseUser.email,
                 role: role,
-              };
-              await setDoc(userDocRef, userData, { merge: true });
+              });
 
               if (role === 'student') {
                 const studentDocRef = doc(
@@ -122,14 +127,11 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
                   'students',
                   firebaseUser.uid
                 );
-                const studentData = {
+                await setDoc(studentDocRef, {
                   id: firebaseUser.uid,
                   userId: firebaseUser.uid,
                   name: name,
                   email: firebaseUser.email,
-                };
-                await setDoc(studentDocRef, studentData, {
-                  merge: true,
                 });
               } else if (role === 'security') {
                 const securityDocRef = doc(
@@ -137,7 +139,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
                   'roles_security',
                   firebaseUser.uid
                 );
-                const securityData = {
+                await setDoc(securityDocRef, {
                   id: firebaseUser.uid,
                   userId: firebaseUser.uid,
                   name: name,
@@ -146,49 +148,35 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
                     .toString(36)
                     .substring(2, 8)
                     .toUpperCase()}`,
-                };
-                await setDoc(securityDocRef, securityData, {
-                  merge: true,
-                });
-              } else if (role === 'admin') {
-                const adminDocRef = doc(
-                  firestore,
-                  'roles_admin',
-                  firebaseUser.uid
-                );
-                const adminData = {
-                  id: firebaseUser.uid,
-                  userId: firebaseUser.uid,
-                  name: name,
-                  email: firebaseUser.email,
-                  employeeId: `ADM-${Math.random()
-                    .toString(36)
-                    .substring(2, 8)
-                    .toUpperCase()}`,
-                };
-                await setDoc(adminDocRef, adminData, {
-                  merge: true,
                 });
               }
+              // Admin role creation via email signup is not a standard flow, so not handled here.
+
               sessionStorage.removeItem('signupRole');
               sessionStorage.removeItem('signupName');
             }
+
+            // Set user state after potential profile creation
+            setUserAuthState({
+              user: firebaseUser,
+              isUserLoading: false,
+              userError: null,
+            });
           } catch (error) {
-            console.error('Error checking or creating user profile:', error);
-             setUserAuthState({ user: null, isUserLoading: false, userError: error as Error });
-             return;
+            console.error('Error in onAuthStateChanged profile check:', error);
+            setUserAuthState({
+              user: null,
+              isUserLoading: false,
+              userError: error as Error,
+            });
           }
-           setUserAuthState({
-            user: firebaseUser,
+        } else {
+          // No user, clear state
+          setUserAuthState({
+            user: null,
             isUserLoading: false,
             userError: null,
           });
-        } else {
-            setUserAuthState({
-                user: null,
-                isUserLoading: false,
-                userError: null,
-            });
         }
       },
       (error) => {
