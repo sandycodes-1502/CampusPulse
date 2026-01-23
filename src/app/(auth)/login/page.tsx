@@ -20,7 +20,10 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/firebase';
-import { initiateEmailSignIn } from '@/firebase/non-blocking-login';
+import {
+  initiateEmailSignIn,
+  initiateGoogleSignIn,
+} from '@/firebase/non-blocking-login';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ChromeIcon } from 'lucide-react';
 import Link from 'next/link';
@@ -49,7 +52,13 @@ export default function LoginPage() {
   const { isSubmitting, isValid } = form.formState;
 
   const onSubmit = (data: FormSchema) => {
+    if (!auth) return;
     initiateEmailSignIn(auth, data.email, data.password);
+  };
+
+  const handleGoogleSignIn = () => {
+    if (!auth) return;
+    initiateGoogleSignIn(auth);
   };
 
   return (
@@ -131,7 +140,11 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <Button variant="outline" className="w-full">
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={handleGoogleSignIn}
+          >
             <ChromeIcon className="mr-2" />
             Sign in with Google
           </Button>
