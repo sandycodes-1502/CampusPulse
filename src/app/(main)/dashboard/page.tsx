@@ -10,7 +10,14 @@ import {
   FilePenLine,
 } from 'lucide-react';
 import { Bar, BarChart, XAxis, YAxis, Tooltip } from 'recharts';
-import { collection, query, orderBy, limit } from 'firebase/firestore';
+import {
+  collection,
+  query,
+  orderBy,
+  limit,
+  where,
+  collectionGroup,
+} from 'firebase/firestore';
 import { format } from 'date-fns';
 
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
@@ -38,8 +45,15 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { Announcement, Complaint } from '@/lib/types';
+import type {
+  Announcement,
+  Complaint,
+  Student,
+  Room as HostelRoom,
+  Outpass,
+} from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { useMemo } from 'react';
 
 const chartData = [
   { time: '8am', entries: 5, exits: 2 },
@@ -86,10 +100,58 @@ export default function DashboardPage() {
     );
   }, [firestore]);
 
+  const studentsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collectionGroup(firestore, 'students'));
+  }, [firestore]);
+
+  const roomsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'hostel_rooms'));
+  }, [firestore]);
+
+  const pendingOutpassesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(
+      collection(firestore, 'outpasses'),
+      where('status', '==', 'pending')
+    );
+  }, [firestore]);
+
+  const activeComplaintsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(
+      collection(firestore, 'complaints'),
+      where('status', 'in', ['open', 'in progress'])
+    );
+  }, [firestore]);
+
   const { data: announcements, isLoading: isLoadingAnnouncements } =
     useCollection<Announcement>(announcementsQuery);
   const { data: complaints, isLoading: isLoadingComplaints } =
     useCollection<Complaint>(complaintsQuery);
+  const { data: students, isLoading: isLoadingStudents } =
+    useCollection<Student>(studentsQuery);
+  const { data: rooms, isLoading: isLoadingRooms } =
+    useCollection<HostelRoom>(roomsQuery);
+  const { data: pendingOutpasses, isLoading: isLoadingPendingOutpasses } =
+    useCollection<Outpass>(pendingOutpassesQuery);
+  const { data: activeComplaints, isLoading: isLoadingActiveComplaints } =
+    useCollection<Complaint>(activeComplaintsQuery);
+
+  const roomsOccupiedCount = useMemo(() => {
+    if (!rooms || !students) return 0;
+    const occupiedRoomIds = new Set(
+      students.map((s) => s.hostelRoomId).filter(Boolean)
+    );
+    return occupiedRoomIds.size;
+  }, [students]);
+
+  const isLoadingStats =
+    isLoadingStudents ||
+    isLoadingRooms ||
+    isLoadingPendingOutpasses ||
+    isLoadingActiveComplaints;
 
   return (
     <>
@@ -104,9 +166,13 @@ export default function DashboardPage() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">1,234</div>
+              {isLoadingStats ? (
+                <Skeleton className="h-8 w-24" />
+              ) : (
+                <div className="text-2xl font-bold">{students?.length ?? 0}</div>
+              )}
               <p className="text-xs text-muted-foreground">
-                +20.1% from last month
+                All registered students
               </p>
             </CardContent>
           </Card>
@@ -118,8 +184,20 @@ export default function DashboardPage() {
               <BedDouble className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">480 / 500</div>
-              <p className="text-xs text-muted-foreground">96% occupancy rate</p>
+              {isLoadingStats ? (
+                <Skeleton className="h-8 w-24" />
+              ) : (
+                <div className="text-2xl font-bold">
+                  {roomsOccupiedCount} / {rooms?.length ?? 0}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                {rooms && rooms.length > 0
+                  ? `${Math.round(
+                      (roomsOccupiedCount / rooms.length) * 100
+                    )}% occupancy rate`
+                  : '...'}
+              </p>
             </CardContent>
           </Card>
           <Card>
@@ -130,8 +208,14 @@ export default function DashboardPage() {
               <Ticket className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">12</div>
-              <p className="text-xs text-muted-foreground">+5 since yesterday</p>
+              {isLoadingStats ? (
+                <Skeleton className="h-8 w-12" />
+              ) : (
+                <div className="text-2xl font-bold">
+                  {pendingOutpasses?.length ?? 0}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">Awaiting approval</p>
             </CardContent>
           </Card>
           <Card>
@@ -142,8 +226,16 @@ export default function DashboardPage() {
               <FilePenLine className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">8</div>
-              <p className="text-xs text-muted-foreground">2 resolved today</p>
+              {isLoadingStats ? (
+                <Skeleton className="h-8 w-12" />
+              ) : (
+                <div className="text-2xl font-bold">
+                  {activeComplaints?.length ?? 0}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Open or in progress
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -281,7 +373,7 @@ export default function DashboardPage() {
                         </TableCell>
                         <TableCell>{complaint.complaintText}</TableCell>
                         <TableCell>
-                           <Badge
+                          <Badge
                             variant="outline"
                             className={cn(
                               'capitalize',

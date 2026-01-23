@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { collection } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -25,7 +26,8 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { useFeedbackStore } from '@/hooks/use-feedback-store';
+import { useUserRole } from '@/hooks/use-user-role';
+import { useFirestore, addDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageHeader } from '@/components/layout/page-header';
 
@@ -36,7 +38,9 @@ const feedbackFormSchema = z.object({
   feedback: z
     .string()
     .min(10, { message: 'Feedback must be at least 10 characters.' })
-    .max(1000, { message: 'Feedback must not be longer than 1000 characters.' }),
+    .max(1000, {
+      message: 'Feedback must not be longer than 1000 characters.',
+    }),
 });
 
 type FeedbackFormValues = z.infer<typeof feedbackFormSchema>;
@@ -44,7 +48,8 @@ type FeedbackFormValues = z.infer<typeof feedbackFormSchema>;
 export default function SubmitFeedbackPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { addFeedback } = useFeedbackStore();
+  const firestore = useFirestore();
+  const { user } = useUserRole();
 
   const form = useForm<FeedbackFormValues>({
     resolver: zodResolver(feedbackFormSchema),
@@ -54,10 +59,20 @@ export default function SubmitFeedbackPage() {
   });
 
   function onSubmit(data: FeedbackFormValues) {
-    addFeedback(data);
+    if (!firestore || !user) return;
+
+    addDocumentNonBlocking(collection(firestore, 'feedback'), {
+      studentId: user.uid,
+      studentName: user.displayName,
+      feedbackText: data.feedback,
+      category: data.category,
+      submissionDate: new Date().toISOString(),
+    });
+
     toast({
       title: 'Feedback Submitted!',
-      description: 'Thank you for your valuable feedback. We will look into it.',
+      description:
+        'Thank you for your valuable feedback. We will look into it.',
       variant: 'default',
       duration: 5000,
     });
@@ -66,73 +81,92 @@ export default function SubmitFeedbackPage() {
 
   return (
     <>
-    <PageHeader title="Submit Anonymous Feedback" />
-    <div className="flex-1 flex flex-col items-center justify-center p-4">
-      <Card className="w-full max-w-2xl">
-        <CardHeader>
-          <CardTitle className="text-2xl font-headline">Submit Anonymous Feedback</CardTitle>
-          <p className="text-muted-foreground">Your voice matters. Help us improve the campus experience. Your submission is completely anonymous.</p>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              <FormField
-                control={form.control}
-                name="category"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Category</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+      <PageHeader title="Submit Feedback" />
+      <div className="flex-1 flex flex-col items-center justify-center p-4">
+        <Card className="w-full max-w-2xl">
+          <CardHeader>
+            <CardTitle className="text-2xl font-headline">
+              Submit Feedback
+            </CardTitle>
+            <p className="text-muted-foreground">
+              Your voice matters. Help us improve the campus experience.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-8"
+              >
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a category" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Hostel">
+                            Hostel Facilities
+                          </SelectItem>
+                          <SelectItem value="College">
+                            College Facilities
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Choose the area your feedback relates to.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="feedback"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Feedback</FormLabel>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a category" />
-                        </SelectTrigger>
+                        <Textarea
+                          placeholder="Tell us what you think..."
+                          className="resize-y min-h-[150px]"
+                          {...field}
+                        />
                       </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Hostel">Hostel Facilities</SelectItem>
-                        <SelectItem value="College">College Facilities</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>
-                      Choose the area your feedback relates to.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="feedback"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Feedback</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Tell us what you think..."
-                        className="resize-y min-h-[150px]"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Please be detailed and constructive.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="flex justify-end items-center gap-2">
-                <Button variant="ghost" asChild>
+                      <FormDescription>
+                        Please be detailed and constructive.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="flex justify-end items-center gap-2">
+                  <Button variant="ghost" asChild>
                     <Link href="/student-dashboard">Cancel</Link>
-                </Button>
-                <Button type="submit" disabled={form.formState.isSubmitting}>
-                  {form.formState.isSubmitting ? "Submitting..." : "Submit Feedback"}
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
-    </div>
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={form.formState.isSubmitting}
+                  >
+                    {form.formState.isSubmitting
+                      ? 'Submitting...'
+                      : 'Submit Feedback'}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      </div>
     </>
   );
 }
