@@ -3,21 +3,66 @@ export type Announcement = {
   title: string;
   content: string;
   date: string;
+  adminId: string;
 };
 
 export type Complaint = {
   id: string;
+  studentId: string;
   studentName: string;
   roomNumber: string;
-  category: 'Maintenance' | 'Security' | 'Cleaning' | 'Other';
-  description: string;
-  status: 'Pending' | 'In Progress' | 'Resolved';
-  date: string;
+  complaintText: string;
+  submissionDate: string;
+  status: 'open' | 'in progress' | 'resolved';
+  adminId?: string;
 };
 
 export type Feedback = {
   id: string;
-  feedback: string;
+  studentId: string;
+  studentName: string;
+  feedbackText: string;
+  submissionDate: string;
   category: 'Hostel' | 'College';
-  date: string;
+};
+
+export type Outpass = {
+  id: string;
+  studentId: string;
+  studentName: string;
+  roomNumber: string;
+  reason: string;
+  destination: string; // Added this field
+  departureDateTime: string;
+  returnDateTime: string;
+  status: 'pending' | 'approved' | 'rejected' | 'used';
+  approvedBySecurityId?: string;
+};
+
+export type Fee = {
+  id: string;
+  studentId: string;
+  studentName: string;
+  amount: number;
+  dueDate: string;
+  paymentDate?: string;
+  status: 'paid' | 'unpaid' | 'overdue';
+};
+
+export type Room = {
+  id: string;
+  roomNumber: string;
+  capacity: number;
+  availability: boolean;
+};
+
+export type EntryExitLog = {
+    id: string;
+    studentId: string;
+    dateTime: {
+      seconds: number;
+      nanoseconds: number;
+    };
+    type: 'entry' | 'exit';
+    recordedBySecurityId: string;
 };

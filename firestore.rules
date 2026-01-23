@@ -193,20 +193,18 @@ service cloud.firestore {
     }
 
     /**
-     * @description A student's outpass request.
-     * @path /users/{userId}/outpasses/{outpassId}
-     * @allow (create) A student creating an outpass for themselves (`auth.uid == userId`).
-     * @allow (update) The student owner or a security staff member updating the outpass.
-     * @deny (list) An admin trying to list all outpasses for a specific user. (Admins should use specific queries).
-     * @deny (create) A student creating an outpass for another student.
-     * @principle Enforces document ownership for creation, allows role-based modification.
+     * @description A student's outpass request. Top-level for querying.
+     * @path /outpasses/{outpassId}
+     * @principle Students can manage their own requests, while security/admins can manage all.
      */
-    match /users/{userId}/outpasses/{outpassId} {
-      allow get: if isOwner(userId) || isAdmin() || isSecurity();
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId) && isCorrectStudentOnCreate(userId);
-      allow update: if (isExistingOwner(userId) || (isSecurity() && resource != null)) && isStudentLinkImmutable();
-      allow delete: if isExistingOwner(userId);
+    match /outpasses/{outpassId} {
+      allow get: if isOwner(resource.data.studentId) || isSecurity() || isAdmin();
+      allow list: if isSecurity() || isAdmin(); // Students query via `where` clause, which is covered by `get`.
+      allow create: if isOwner(request.resource.data.studentId);
+      allow update: if (isOwner(resource.data.studentId) && resource.data.status == 'pending' && isStudentLinkImmutable()) ||
+                        (isSecurity() && resource != null) ||
+                        (isAdmin() && resource != null);
+      allow delete: if isOwner(resource.data.studentId) && resource.data.status == 'pending';
     }
 
     /**
@@ -228,52 +226,39 @@ service cloud.firestore {
     }
 
     /**
-     * @description Hostel fee records for a student.
-     * @path /users/{userId}/hostel_fees/{hostelFeeId}
-     * @allow (get) A student viewing their own fee records.
-     * @allow (create, update) An admin creating or modifying a fee record for a student.
-     * @deny (list) Anyone listing fee records.
-     * @deny (create) A student trying to create their own fee record.
-     * @principle Restricts read access to owner and write access to admins.
+     * @description Hostel fee records for a student. Top-level for querying.
+     * @path /hostel_fees/{hostelFeeId}
+     * @principle Students can read their own, admins can manage all.
      */
-    match /users/{userId}/hostel_fees/{hostelFeeId} {
-      allow get: if isOwner(userId) || isAdmin();
-      allow list: if isOwner(userId) || isAdmin();
-      allow create: if isAdmin();
-      allow update, delete: if isAdmin() && resource != null;
+    match /hostel_fees/{hostelFeeId} {
+      allow get: if isOwner(resource.data.studentId) || isAdmin();
+      allow list: if isAdmin(); // Students query via `where`.
+      allow create, update, delete: if isAdmin();
     }
 
     /**
-     * @description Complaints filed by a student.
-     * @path /users/{userId}/complaints/{complaintId}
-     * @allow (create) A student filing a complaint for themselves.
-     * @allow (get) The student owner or an admin viewing the complaint.
-     * @allow (update) An admin updating the status of a complaint.
-     * @deny (update) The student owner trying to change the status of their own complaint.
-     * @principle Allows creation by owner and modification by a privileged role.
+     * @description Complaints filed by a student. Top-level for querying.
+     * @path /complaints/{complaintId}
+     * @principle Students can manage their own, admins can manage all.
      */
-    match /users/{userId}/complaints/{complaintId} {
-      allow get: if isOwner(userId) || isAdmin();
-      allow list: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId) && isCorrectStudentOnCreate(userId);
-      allow update: if (isAdmin() && resource != null) && isStudentLinkImmutable();
-      allow delete: if isExistingOwner(userId);
+    match /complaints/{complaintId} {
+      allow get: if isOwner(resource.data.studentId) || isAdmin();
+      allow list: if isAdmin(); // Students query via `where`.
+      allow create: if isOwner(request.resource.data.studentId);
+      allow update: if isAdmin() && resource != null;
+      allow delete: if isOwner(resource.data.studentId);
     }
 
     /**
-     * @description Feedback submitted by a student.
-     * @path /users/{userId}/feedback/{feedbackId}
-     * @allow (create) A student submitting feedback.
-     * @allow (get, list) The student owner or an admin viewing feedback.
-     * @deny (update, delete) Feedback is immutable once submitted.
-     * @principle Write-once data model; readable by owner and admins.
+     * @description Feedback submitted by a student. Top-level for querying.
+     * @path /feedback/{feedbackId}
+     * @principle Students create their own, admins can read all. Immutable.
      */
-    match /users/{userId}/feedback/{feedbackId} {
-      allow get: if isOwner(userId) || isAdmin();
-      allow list: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId) && isCorrectStudentOnCreate(userId);
-      allow update: if false;
-      allow delete: if false;
+    match /feedback/{feedbackId} {
+        allow get: if isOwner(resource.data.studentId) || isAdmin();
+        allow list: if isAdmin(); // Students query via `where`.
+        allow create: if isOwner(request.resource.data.studentId);
+        allow update, delete: if false;
     }
 
     /**

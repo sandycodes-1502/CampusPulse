@@ -1,13 +1,36 @@
 'use client';
 
 import { useState } from 'react';
+import {
+  collection,
+  doc,
+  addDoc,
+  updateDoc,
+  serverTimestamp,
+  query,
+  where,
+  orderBy,
+  limit,
+} from 'firebase/firestore';
+import {
+  QrCode,
+  Search,
+  LogOut,
+  LogIn,
+  CheckCircle,
+  XCircle,
+  Clock,
+  UserCheck,
+} from 'lucide-react';
+import { format } from 'date-fns';
+
+import { useFirestore, useUser, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -22,113 +45,319 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import {
-  QrCode,
-  Search,
-  LogOut,
-  LogIn,
-  CheckCircle,
-  XCircle,
-  Clock,
-} from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { format } from 'date-fns';
+import type { Outpass, EntryExitLog } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
+import { updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
-type OutpassData = {
-  studentName: string;
-  studentId: string;
-  roomNumber: string;
-  avatarUrl: string;
-  validFrom: string;
-  validTo: string;
-  destination: string;
-  reason: string;
-  status: 'Valid';
-};
+type OutpassVerificationResult = (Outpass & { id: string }) | { status: 'Not Found' | 'Not Approved' | 'Used' };
 
-type VerificationResult = OutpassData | { status: 'Not Found' };
-
-const mockLogs = [
-  {
-    id: '1',
-    studentName: 'Amit Gupta',
-    studentId: 'STU123',
-    type: 'Exit' as 'Entry' | 'Exit',
-    timestamp: new Date(),
-  },
-  {
-    id: '2',
-    studentName: 'Sunita Sharma',
-    studentId: 'STU456',
-    type: 'Entry' as 'Entry' | 'Exit',
-    timestamp: new Date(new Date().getTime() - 30 * 60 * 1000),
-  },
-  {
-    id: '3',
-    studentName: 'Rajesh Kumar',
-    studentId: 'STU789',
-    type: 'Exit' as 'Entry' | 'Exit',
-    timestamp: new Date(new Date().getTime() - 60 * 60 * 1000),
-  },
-];
-
-const mockOutpassData: { [key: string]: OutpassData } = {
-  'OP-12345': {
-    studentName: 'Priya Patel',
-    studentId: 'STU987',
-    roomNumber: 'C-301',
-    avatarUrl: 'https://picsum.photos/seed/priya/100/100',
-    validFrom: new Date().toISOString(),
-    validTo: new Date(new Date().getTime() + 8 * 60 * 60 * 1000).toISOString(),
-    destination: 'City Library',
-    reason: 'Group study for exam',
-    status: 'Valid',
-  },
-};
-
-export default function SecurityPage() {
-  const [logs, setLogs] = useState(mockLogs);
+function OutpassVerification() {
+  const firestore = useFirestore();
+  const { toast } = useToast();
   const [outpassId, setOutpassId] = useState('');
-  const [verificationResult, setVerificationResult] =
-    useState<VerificationResult | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationResult, setVerificationResult] = useState<OutpassVerificationResult | null>(null);
 
-  const handleVerify = () => {
-    if (!outpassId) return;
+  const approvedOutpassesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(
+      collection(firestore, 'outpasses'),
+      where('status', '==', 'approved'),
+      orderBy('departureDateTime', 'desc')
+    );
+  }, [firestore]);
+
+  const { data: approvedOutpasses, isLoading: isLoadingOutpasses } = useCollection<Outpass>(approvedOutpassesQuery);
+
+  const handleVerify = async () => {
+    if (!outpassId || !firestore) return;
     setIsVerifying(true);
     setVerificationResult(null);
-    setTimeout(() => {
-      const result = mockOutpassData[outpassId.toUpperCase()];
-      if (result) {
-        setVerificationResult(result);
-      } else {
+
+    try {
+      const outpassRef = doc(firestore, 'outpasses', outpassId);
+      const { data: outpass, error } = await new Promise<any>((resolve) => {
+        useDoc.fetcher(outpassRef, resolve);
+      });
+
+
+      if (error || !outpass) {
         setVerificationResult({ status: 'Not Found' });
+      } else if (outpass.status === 'approved') {
+        setVerificationResult(outpass as Outpass & { id: string });
+      } else {
+        setVerificationResult({ status: outpass.status === 'used' ? 'Used' : 'Not Approved' });
       }
+    } catch (e) {
+      console.error(e);
+      setVerificationResult({ status: 'Not Found' });
+      toast({ title: 'Error verifying outpass', variant: 'destructive' });
+    } finally {
       setIsVerifying(false);
-    }, 1000);
-  };
-
-  const handleManualLog = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    const studentId = formData.get('studentId') as string;
-    const type = formData.get('logType') as 'Entry' | 'Exit';
-
-    if (studentId && type) {
-      const newLog = {
-        id: `${logs.length + 1}`,
-        studentName: `Student ${studentId.slice(-3)}`, // Mock name
-        studentId: studentId,
-        type: type,
-        timestamp: new Date(),
-      };
-      setLogs([newLog, ...logs]);
-      event.currentTarget.reset();
     }
   };
 
+  const handleMarkAsUsed = (id: string) => {
+    if (!firestore) return;
+    const outpassRef = doc(firestore, 'outpasses', id);
+    updateDocumentNonBlocking(outpassRef, { status: 'used' });
+    toast({ title: 'Outpass marked as used.' });
+    setVerificationResult(null);
+    setOutpassId('');
+  };
+  
+  return (
+    <div className="grid gap-6 lg:grid-cols-2">
+      <Card>
+        <CardHeader>
+          <CardTitle>Verify Digital Outpass</CardTitle>
+          <CardDescription>
+            Enter the Outpass ID to verify its authenticity.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex w-full max-w-sm items-center space-x-2">
+            <Input
+              type="text"
+              placeholder="Enter Outpass ID"
+              value={outpassId}
+              onChange={(e) => setOutpassId(e.target.value)}
+              disabled={isVerifying}
+            />
+            <Button
+              onClick={handleVerify}
+              disabled={isVerifying || !outpassId}
+            >
+              {isVerifying ? 'Verifying...' : <Search className="mr-2 h-4 w-4" />}
+              Verify
+            </Button>
+          </div>
+          {verificationResult && (
+            <Card className="mt-4 bg-muted/30">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  {'studentName' in verificationResult ? (
+                    <CheckCircle className="h-6 w-6 text-green-500" />
+                  ) : (
+                    <XCircle className="h-6 w-6 text-red-500" />
+                  )}
+                  Verification Result
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {'studentName' in verificationResult ? (
+                  <div className="space-y-4">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                      <Avatar className="h-24 w-24 border">
+                        <AvatarFallback>
+                          {verificationResult.studentName.split(' ').map((n) => n[0]).join('')}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="grid gap-1.5">
+                        <p className="font-semibold text-lg">{verificationResult.studentName}</p>
+                        <p className="text-sm text-muted-foreground">ID: {verificationResult.studentId} | Room: {verificationResult.roomNumber}</p>
+                        <p className="text-sm">Destination: {verificationResult.reason}</p>
+                        <p className="text-sm flex items-center gap-1">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <span>
+                            {format(new Date(verificationResult.departureDateTime), 'p, dd MMM')} - {format(new Date(verificationResult.returnDateTime), 'p, dd MMM')}
+                          </span>
+                        </p>
+                        <Badge className="w-fit bg-green-100 text-green-800 hover:bg-green-200">Valid & Approved</Badge>
+                      </div>
+                    </div>
+                    <Button className="w-full" onClick={() => handleMarkAsUsed(verificationResult.id)}>
+                      <UserCheck className="mr-2 h-4 w-4" />
+                      Mark as Used
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="font-semibold text-red-500">{verificationResult.status}</p>
+                    <p className="text-sm text-muted-foreground">This outpass is not valid for use.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Active Approved Outpasses</CardTitle>
+          <CardDescription>
+            List of students currently on an approved outpass.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Student</TableHead>
+                <TableHead>Return Time</TableHead>
+                <TableHead className='text-right'>Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoadingOutpasses ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell className='text-right'><Skeleton className="h-8 w-20 ml-auto" /></TableCell>
+                  </TableRow>
+                ))
+              ) : approvedOutpasses?.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={3} className="h-24 text-center">No approved outpasses.</TableCell>
+                </TableRow>
+              ) : (
+                approvedOutpasses?.map((outpass) => (
+                  <TableRow key={outpass.id}>
+                    <TableCell>
+                      <div className="font-medium">{outpass.studentName}</div>
+                      <div className="text-sm text-muted-foreground">{outpass.studentId}</div>
+                    </TableCell>
+                    <TableCell>{format(new Date(outpass.returnDateTime), 'p, dd MMM')}</TableCell>
+                    <TableCell className='text-right'>
+                      <Button variant="outline" size="sm" onClick={() => handleMarkAsUsed(outpass.id)}>Mark Used</Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function EntryExitLogging() {
+  const firestore = useFirestore();
+  const { user } = useUser();
+  const { toast } = useToast();
+
+  const logsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'entry_exit_logs'), orderBy('dateTime', 'desc'), limit(10));
+  }, [firestore]);
+
+  const { data: logs, isLoading: isLoadingLogs } = useCollection<EntryExitLog>(logsQuery);
+
+  const handleManualLog = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!firestore || !user) return;
+
+    const formData = new FormData(event.currentTarget);
+    const studentId = formData.get('studentId') as string;
+    const type = formData.get('logType') as 'entry' | 'exit';
+
+    if (studentId && type) {
+      addDocumentNonBlocking(collection(firestore, 'entry_exit_logs'), {
+        studentId,
+        type,
+        dateTime: serverTimestamp(),
+        recordedBySecurityId: user.uid,
+      });
+      toast({ title: 'Log recorded successfully.' });
+      (event.target as HTMLFormElement).reset();
+    }
+  };
+
+  return (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+      <Card className="lg:col-span-4">
+        <CardHeader>
+          <CardTitle>Recent Entry/Exit Logs</CardTitle>
+          <CardDescription>
+            Showing the 10 most recent student entries and exits.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Student ID</TableHead>
+                <TableHead className="text-center">Status</TableHead>
+                <TableHead className="text-right">Time</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoadingLogs ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell className="text-center"><Skeleton className="h-6 w-16 mx-auto" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
+                  </TableRow>
+                ))
+              ) : logs?.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={3} className="h-24 text-center">No logs recorded yet.</TableCell>
+                </TableRow>
+              ) : (
+                logs?.map((log) => (
+                  <TableRow key={log.id}>
+                    <TableCell>
+                      <div className="font-medium">{log.studentId}</div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge
+                        variant={log.type === 'entry' ? 'secondary' : 'outline'}
+                        className={log.type === 'entry' ? 'text-green-800 bg-green-100' : 'text-orange-800 bg-orange-100'}
+                      >
+                        {log.type === 'entry' ? <LogIn className="mr-1 h-3 w-3" /> : <LogOut className="mr-1 h-3 w-3" />}
+                        {log.type}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {log.dateTime ? format(new Date(log.dateTime.seconds * 1000), 'p') : 'Just now'}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+      <Card className="lg:col-span-3">
+        <CardHeader>
+          <CardTitle>Manual Log Entry</CardTitle>
+          <CardDescription>Manually record a student's entry or exit.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleManualLog} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="studentId">Student ID</Label>
+              <Input id="studentId" name="studentId" placeholder="Enter Student ID" required />
+            </div>
+            <div className="space-y-2">
+              <Label>Log Type</Label>
+              <RadioGroup name="logType" defaultValue="entry" className="flex gap-4 pt-2">
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="entry" id="entry" />
+                  <Label htmlFor="entry">Entry</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="exit" id="exit" />
+                  <Label htmlFor="exit">Exit</Label>
+                </div>
+              </RadioGroup>
+            </div>
+            <Button type="submit" className="w-full">Record Log</Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+export default function SecurityPage() {
   return (
     <>
       <PageHeader title="Security Desk" />
@@ -145,203 +374,10 @@ export default function SecurityPage() {
             </TabsTrigger>
           </TabsList>
           <TabsContent value="verify">
-            <Card>
-              <CardHeader>
-                <CardTitle>Verify Digital Outpass</CardTitle>
-                <CardDescription>
-                  Scan the QR code or enter the Outpass ID to verify its
-                  authenticity.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex w-full max-w-sm items-center space-x-2">
-                  <Input
-                    type="text"
-                    placeholder="Enter Outpass ID (e.g., OP-12345)"
-                    value={outpassId}
-                    onChange={(e) => setOutpassId(e.target.value)}
-                    disabled={isVerifying}
-                  />
-                  <Button
-                    onClick={handleVerify}
-                    disabled={isVerifying || !outpassId}
-                  >
-                    {isVerifying ? (
-                      'Verifying...'
-                    ) : (
-                      <>
-                        <Search className="mr-2 h-4 w-4" /> Verify
-                      </>
-                    )}
-                  </Button>
-                </div>
-                {verificationResult && (
-                  <Card className="mt-4 bg-muted/30">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        {verificationResult.status === 'Valid' ? (
-                          <CheckCircle className="h-6 w-6 text-green-500" />
-                        ) : (
-                          <XCircle className="h-6 w-6 text-red-500" />
-                        )}
-                        Verification Result
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {verificationResult.status === 'Valid' ? (
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                          <Avatar className="h-24 w-24 border">
-                            <AvatarImage
-                              src={verificationResult.avatarUrl}
-                              alt={verificationResult.studentName}
-                            />
-                            <AvatarFallback>
-                              {verificationResult.studentName
-                                .split(' ')
-                                .map((n) => n[0])
-                                .join('')}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="grid gap-1.5">
-                            <p className="font-semibold text-lg">
-                              {verificationResult.studentName}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              ID: {verificationResult.studentId} | Room:{' '}
-                              {verificationResult.roomNumber}
-                            </p>
-                            <p className="text-sm">
-                              Destination: {verificationResult.destination}
-                            </p>
-                            <p className="text-sm flex items-center gap-1">
-                              <Clock className="h-4 w-4 text-muted-foreground" />
-                              <span>
-                                Valid from{' '}
-                                {format(new Date(verificationResult.validFrom), 'p')}{' '}
-                                to{' '}
-                                {format(new Date(verificationResult.validTo), 'p')}
-                              </span>
-                            </p>
-                            <Badge className="w-fit bg-green-100 text-green-800 hover:bg-green-200">
-                              Valid Outpass
-                            </Badge>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-center py-4">
-                          <p className="font-semibold text-red-500">
-                            Outpass ID Not Found
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            Please check the ID and try again.
-                          </p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
-              </CardContent>
-            </Card>
+            <OutpassVerification />
           </TabsContent>
           <TabsContent value="log">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-              <Card className="lg:col-span-4">
-                <CardHeader>
-                  <CardTitle>Today's Log</CardTitle>
-                  <CardDescription>
-                    Showing all student entries and exits for today.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Student</TableHead>
-                        <TableHead className="text-center">Status</TableHead>
-                        <TableHead className="text-right">Time</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {logs.map((log) => (
-                        <TableRow key={log.id}>
-                          <TableCell>
-                            <div className="font-medium">{log.studentName}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {log.studentId}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge
-                              variant={
-                                log.type === 'Entry' ? 'secondary' : 'outline'
-                              }
-                              className={`
-                                ${
-                                  log.type === 'Entry'
-                                    ? 'text-green-800 bg-green-100'
-                                    : 'text-orange-800 bg-orange-100'
-                                }
-                              `}
-                            >
-                              {log.type === 'Entry' ? (
-                                <LogIn className="mr-1 h-3 w-3" />
-                              ) : (
-                                <LogOut className="mr-1 h-3 w-3" />
-                              )}
-                              {log.type}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {format(log.timestamp, 'p')}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-              <Card className="lg:col-span-3">
-                <CardHeader>
-                  <CardTitle>Manual Log Entry</CardTitle>
-                  <CardDescription>
-                    Manually record a student's entry or exit.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleManualLog} className="space-y-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="studentId">Student ID</Label>
-                      <Input
-                        id="studentId"
-                        name="studentId"
-                        placeholder="Enter Student ID"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Log Type</Label>
-                      <RadioGroup
-                        name="logType"
-                        defaultValue="Entry"
-                        className="flex gap-4 pt-2"
-                      >
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="Entry" id="entry" />
-                          <Label htmlFor="entry">Entry</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="Exit" id="exit" />
-                          <Label htmlFor="exit">Exit</Label>
-                        </div>
-                      </RadioGroup>
-                    </div>
-                    <Button type="submit" className="w-full">
-                      Record Log
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            </div>
+            <EntryExitLogging />
           </TabsContent>
         </Tabs>
       </div>
