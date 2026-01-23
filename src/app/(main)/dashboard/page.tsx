@@ -94,7 +94,7 @@ export default function DashboardPage() {
   const complaintsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
-      collection(firestore, 'complaints'),
+      collectionGroup(firestore, 'complaints'),
       orderBy('submissionDate', 'desc'),
       limit(5)
     );
@@ -113,7 +113,7 @@ export default function DashboardPage() {
   const pendingOutpassesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
-      collection(firestore, 'outpasses'),
+      collectionGroup(firestore, 'outpasses'),
       where('status', '==', 'pending')
     );
   }, [firestore]);
@@ -121,7 +121,7 @@ export default function DashboardPage() {
   const activeComplaintsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
-      collection(firestore, 'complaints'),
+      collectionGroup(firestore, 'complaints'),
       where('status', 'in', ['open', 'in progress'])
     );
   }, [firestore]);
