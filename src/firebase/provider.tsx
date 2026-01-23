@@ -10,10 +10,9 @@ import React, {
   useEffect,
 } from 'react';
 import { FirebaseApp } from 'firebase/app';
-import { Firestore, doc, getDoc } from 'firebase/firestore';
+import { Firestore, doc, getDoc, setDoc } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
-import { setDocumentNonBlocking } from './non-blocking-updates';
 
 interface FirebaseProviderProps {
   children: ReactNode;
@@ -113,7 +112,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
                 email: firebaseUser.email,
                 role: role,
               };
-              setDocumentNonBlocking(userDocRef, userData, { merge: true });
+              await setDoc(userDocRef, userData, { merge: true });
 
               if (role === 'student') {
                 const studentDocRef = doc(
@@ -129,7 +128,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
                   name: name,
                   email: firebaseUser.email,
                 };
-                setDocumentNonBlocking(studentDocRef, studentData, {
+                await setDoc(studentDocRef, studentData, {
                   merge: true,
                 });
               } else if (role === 'security') {
@@ -148,7 +147,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
                     .substring(2, 8)
                     .toUpperCase()}`,
                 };
-                setDocumentNonBlocking(securityDocRef, securityData, {
+                await setDoc(securityDocRef, securityData, {
                   merge: true,
                 });
               } else if (role === 'admin') {
@@ -167,7 +166,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
                     .substring(2, 8)
                     .toUpperCase()}`,
                 };
-                setDocumentNonBlocking(adminDocRef, adminData, {
+                await setDoc(adminDocRef, adminData, {
                   merge: true,
                 });
               }
@@ -176,13 +175,21 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
             }
           } catch (error) {
             console.error('Error checking or creating user profile:', error);
+             setUserAuthState({ user: null, isUserLoading: false, userError: error as Error });
+             return;
           }
+           setUserAuthState({
+            user: firebaseUser,
+            isUserLoading: false,
+            userError: null,
+          });
+        } else {
+            setUserAuthState({
+                user: null,
+                isUserLoading: false,
+                userError: null,
+            });
         }
-        setUserAuthState({
-          user: firebaseUser,
-          isUserLoading: false,
-          userError: null,
-        });
       },
       (error) => {
         // Auth listener error
@@ -289,4 +296,3 @@ export const useUser = (): UserHookResult => {
   const { user, isUserLoading, userError } = useFirebase(); // Leverages the main hook
   return { user, isUserLoading, userError };
 };
-    
