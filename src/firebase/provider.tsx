@@ -151,6 +151,25 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
                 setDocumentNonBlocking(securityDocRef, securityData, {
                   merge: true,
                 });
+              } else if (role === 'admin') {
+                const adminDocRef = doc(
+                  firestore,
+                  'roles_admin',
+                  firebaseUser.uid
+                );
+                const adminData = {
+                  id: firebaseUser.uid,
+                  userId: firebaseUser.uid,
+                  name: name,
+                  email: firebaseUser.email,
+                  employeeId: `ADM-${Math.random()
+                    .toString(36)
+                    .substring(2, 8)
+                    .toUpperCase()}`,
+                };
+                setDocumentNonBlocking(adminDocRef, adminData, {
+                  merge: true,
+                });
               }
               sessionStorage.removeItem('signupRole');
               sessionStorage.removeItem('signupName');
