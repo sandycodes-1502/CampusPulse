@@ -15,8 +15,8 @@ import {
   useFirestore,
   useCollection,
   useMemoFirebase,
-  useUserRole,
 } from '@/firebase';
+import { useUserRole } from '@/hooks/use-user-role';
 import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
 import {

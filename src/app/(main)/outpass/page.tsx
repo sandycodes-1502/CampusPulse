@@ -12,7 +12,8 @@ import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 
-import { useFirestore, useUserRole, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useUserRole } from '@/hooks/use-user-role';
 import { PageHeader } from '@/components/layout/page-header';
 import {
   Card,
