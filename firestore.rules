@@ -209,7 +209,6 @@ service cloud.firestore {
      */
     match /outpasses/{outpassId} {
       allow get: if isOwner(resource.data.studentId) || isSecurity() || isAdmin();
-      allow list: if isSecurity() || isAdmin(); // Students query via `where` clause, which is covered by `get`.
       allow create: if isOwner(request.resource.data.studentId);
       allow update: if (isOwner(resource.data.studentId) && resource.data.status == 'pending' && isStudentLinkImmutable()) ||
                         (isSecurity() && resource != null) ||
@@ -242,7 +241,6 @@ service cloud.firestore {
      */
     match /hostel_fees/{hostelFeeId} {
       allow get: if isOwner(resource.data.studentId) || isAdmin();
-      allow list: if isAdmin(); // Students query via `where`.
       allow create, update, delete: if isAdmin();
     }
 
@@ -253,7 +251,6 @@ service cloud.firestore {
      */
     match /complaints/{complaintId} {
       allow get: if isOwner(resource.data.studentId) || isAdmin();
-      allow list: if isAdmin(); // Students query via `where`.
       allow create: if isOwner(request.resource.data.studentId);
       allow update: if isAdmin() && resource != null;
       allow delete: if isOwner(resource.data.studentId);
@@ -266,7 +263,6 @@ service cloud.firestore {
      */
     match /feedback/{feedbackId} {
         allow get: if isOwner(resource.data.studentId) || isAdmin();
-        allow list: if isAdmin(); // Students query via `where`.
         allow create: if isOwner(request.resource.data.studentId);
         allow update, delete: if false;
     }

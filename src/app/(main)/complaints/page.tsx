@@ -1,4 +1,4 @@
-'use client'; // For DropdownMenu and any future interactions
+'use client';
 
 import {
   collection,
@@ -6,14 +6,12 @@ import {
   orderBy,
   doc,
   updateDoc,
+  where,
 } from 'firebase/firestore';
 import { MoreHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import {
-  useFirestore,
-  useCollection,
-  useMemoFirebase,
-} from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useUserRole } from '@/hooks/use-user-role';
 import { PageHeader } from '@/components/layout/page-header';
 import {
   Card,
@@ -48,14 +46,28 @@ import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 export default function ComplaintsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { user, role } = useUserRole();
 
   const complaintsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(
-      collection(firestore, 'complaints'),
-      orderBy('submissionDate', 'desc')
-    );
-  }, [firestore]);
+    if (!firestore || !user) return null;
+
+    if (role === 'student') {
+      return query(
+        collection(firestore, 'complaints'),
+        where('studentId', '==', user.uid),
+        orderBy('submissionDate', 'desc')
+      );
+    }
+
+    if (role === 'admin') {
+      return query(
+        collection(firestore, 'complaints'),
+        orderBy('submissionDate', 'desc')
+      );
+    }
+
+    return null; // For security role or if role is not determined yet
+  }, [firestore, user, role]);
 
   const { data: complaints, isLoading } =
     useCollection<Complaint>(complaintsQuery);
@@ -69,6 +81,8 @@ export default function ComplaintsPage() {
     updateDocumentNonBlocking(complaintRef, { status });
     toast({ title: `Complaint status updated to ${status}.` });
   };
+  
+  const canManage = role === 'admin';
 
   return (
     <>
@@ -95,9 +109,11 @@ export default function ComplaintsPage() {
                   <TableHead className="hidden md:table-cell w-[120px] text-right">
                     Date
                   </TableHead>
-                  <TableHead className="w-[50px]">
-                    <span className="sr-only">Actions</span>
-                  </TableHead>
+                  {canManage && (
+                    <TableHead className="w-[50px]">
+                      <span className="sr-only">Actions</span>
+                    </TableHead>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -116,9 +132,11 @@ export default function ComplaintsPage() {
                       <TableCell className="hidden md:table-cell text-right">
                         <Skeleton className="h-4 w-24 ml-auto" />
                       </TableCell>
-                      <TableCell>
-                        <Skeleton className="h-8 w-8 ml-auto" />
-                      </TableCell>
+                      {canManage && (
+                        <TableCell>
+                          <Skeleton className="h-8 w-8 ml-auto" />
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))
                 ) : complaints?.length === 0 ? (
@@ -168,37 +186,42 @@ export default function ComplaintsPage() {
                           'MMM d, yyyy'
                         )}
                       </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              aria-haspopup="true"
-                              size="icon"
-                              variant="ghost"
-                            >
-                              <MoreHorizontal className="h-4 w-4" />
-                              <span className="sr-only">Toggle menu</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                handleStatusChange(complaint.id, 'in progress')
-                              }
-                            >
-                              Mark as In Progress
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                handleStatusChange(complaint.id, 'resolved')
-                              }
-                            >
-                              Mark as Resolved
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
+                      {canManage && (
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                aria-haspopup="true"
+                                size="icon"
+                                variant="ghost"
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                                <span className="sr-only">Toggle menu</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  handleStatusChange(
+                                    complaint.id,
+                                    'in progress'
+                                  )
+                                }
+                              >
+                                Mark as In Progress
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  handleStatusChange(complaint.id, 'resolved')
+                                }
+                              >
+                                Mark as Resolved
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))
                 )}
