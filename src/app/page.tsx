@@ -1,26 +1,32 @@
-import Link from "next/link";
-import Image from "next/image";
-import {
-  ArrowRight,
-  ShieldCheck,
-  User,
-  UserCog,
-} from "lucide-react";
+'use client';
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AppLogo } from "@/components/app-logo";
-import { placeholderImages } from "@/lib/placeholder-images";
+import Link from 'next/link';
+import Image from 'next/image';
+import { ArrowRight, ShieldCheck, User, UserCog } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AppLogo } from '@/components/app-logo';
+import { placeholderImages } from '@/lib/placeholder-images';
+import { useUser } from '@/firebase';
 
 export default function Home() {
-  const heroImage = placeholderImages.find(p => p.id === "landing-hero");
+  const heroImage = placeholderImages.find((p) => p.id === 'landing-hero');
+  const { user, isUserLoading } = useUser();
 
   return (
     <div className="flex flex-col min-h-screen">
       <header className="container mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
         <AppLogo />
         <Button asChild>
-          <Link href="/dashboard">Go to App <ArrowRight className="ml-2 h-4 w-4" /></Link>
+          <Link href={user ? "/dashboard" : "/login"}>
+            {isUserLoading
+              ? 'Loading...'
+              : user
+                ? 'Go to App'
+                : 'Login'}
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Link>
         </Button>
       </header>
       <main className="flex-grow">
@@ -30,7 +36,9 @@ export default function Home() {
               One Platform for a Smarter Campus.
             </h1>
             <p className="mt-6 text-lg md:text-xl text-muted-foreground">
-              CampusPulse is a centralized digital platform designed to simplify and modernize hostel and campus operations, bringing everything into one smart, unified system.
+              CampusPulse is a centralized digital platform designed to simplify
+              and modernize hostel and campus operations, bringing everything
+              into one smart, unified system.
             </p>
             <div className="mt-10">
               <Button size="lg" asChild>
@@ -58,7 +66,9 @@ export default function Home() {
         <section className="bg-card py-16 md:py-24">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold font-headline">A Role-Based Digital System</h2>
+              <h2 className="text-3xl md:text-4xl font-bold font-headline">
+                A Role-Based Digital System
+              </h2>
               <p className="mt-4 text-lg text-muted-foreground">
                 Tailored experiences for every member of your campus community.
               </p>
@@ -69,14 +79,19 @@ export default function Home() {
                   <div className="mx-auto bg-primary/20 rounded-full h-16 w-16 flex items-center justify-center">
                     <User className="h-8 w-8 text-primary-foreground" />
                   </div>
-                  <CardTitle className="mt-4 font-headline">Student Portal</CardTitle>
+                  <CardTitle className="mt-4 font-headline">
+                    Student Portal
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground">
-                    Request outpasses, check fee status, submit feedback, and raise complaints with ease.
+                    Request outpasses, check fee status, submit feedback, and
+                    raise complaints with ease.
                   </p>
                   <Button variant="outline" className="mt-6" asChild>
-                    <Link href="/dashboard">Enter Portal <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                    <Link href="/dashboard">
+                      Enter Portal <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
                   </Button>
                 </CardContent>
               </Card>
@@ -85,14 +100,19 @@ export default function Home() {
                   <div className="mx-auto bg-primary/20 rounded-full h-16 w-16 flex items-center justify-center">
                     <ShieldCheck className="h-8 w-8 text-primary-foreground" />
                   </div>
-                  <CardTitle className="mt-4 font-headline">Security Desk</CardTitle>
+                  <CardTitle className="mt-4 font-headline">
+                    Security Desk
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground">
-                    Verify outpasses in real-time and maintain accurate student entry/exit logs.
+                    Verify outpasses in real-time and maintain accurate student
+                    entry/exit logs.
                   </p>
                   <Button variant="outline" className="mt-6" asChild>
-                    <Link href="/dashboard">Access Desk <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                    <Link href="/dashboard">
+                      Access Desk <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
                   </Button>
                 </CardContent>
               </Card>
@@ -101,14 +121,19 @@ export default function Home() {
                   <div className="mx-auto bg-primary/20 rounded-full h-16 w-16 flex items-center justify-center">
                     <UserCog className="h-8 w-8 text-primary-foreground" />
                   </div>
-                  <CardTitle className="mt-4 font-headline">Admin Dashboard</CardTitle>
+                  <CardTitle className="mt-4 font-headline">
+                    Admin Dashboard
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground">
-                    Manage all campus operations, view analytics, and post announcements.
+                    Manage all campus operations, view analytics, and post
+                    announcements.
                   </p>
                   <Button variant="outline" className="mt-6" asChild>
-                    <Link href="/dashboard">Open Dashboard <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                    <Link href="/dashboard">
+                      Open Dashboard <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
                   </Button>
                 </CardContent>
               </Card>

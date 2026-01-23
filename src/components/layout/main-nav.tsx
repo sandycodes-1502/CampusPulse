@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AppLogo } from '@/components/app-logo';
+import { useAuth, useUser } from '@/firebase';
 
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -49,6 +50,8 @@ const menuItems = [
 
 export function MainNav() {
   const pathname = usePathname();
+  const auth = useAuth();
+  const { user } = useUser();
 
   return (
     <Sidebar>
@@ -78,12 +81,12 @@ export function MainNav() {
           <DropdownMenuTrigger asChild>
             <button className="flex items-center gap-3 rounded-md p-2 w-full text-left hover:bg-sidebar-accent transition-colors">
               <Avatar className="h-9 w-9">
-                <AvatarImage src="https://picsum.photos/seed/admin/40/40" alt="Admin" />
-                <AvatarFallback>AD</AvatarFallback>
+                <AvatarImage src={user?.photoURL ?? undefined} alt={user?.displayName ?? 'User'} />
+                <AvatarFallback>{user?.displayName?.[0] ?? user?.email?.[0] ?? 'U'}</AvatarFallback>
               </Avatar>
               <div className="flex-grow overflow-hidden">
-                <p className="font-medium text-sm truncate">Admin User</p>
-                <p className="text-xs text-muted-foreground truncate">admin@campus.com</p>
+                <p className="font-medium text-sm truncate">{user?.displayName ?? 'User'}</p>
+                <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
               </div>
               <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
             </button>
@@ -91,14 +94,14 @@ export function MainNav() {
           <DropdownMenuContent className="w-56 mb-2" align="end" forceMount>
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">Admin</p>
+                <p className="text-sm font-medium leading-none">{user?.displayName ?? 'User'}</p>
                 <p className="text-xs leading-none text-muted-foreground">
-                  admin@campus.com
+                  {user?.email}
                 </p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => auth.signOut()}>
               <LogOut className="mr-2 h-4 w-4" />
               <span>Log out</span>
             </DropdownMenuItem>
