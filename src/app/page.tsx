@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -11,21 +10,21 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AppLogo } from '@/components/app-logo';
 import { placeholderImages } from '@/lib/placeholder-images';
-import { useUser } from '@/firebase';
+import { useUserRole } from '@/hooks/use-user-role';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function Home() {
   const heroImage = placeholderImages.find((p) => p.id === 'landing-hero');
-  const { user, isUserLoading } = useUser();
+  const { user, role, isLoading } = useUserRole();
   const router = useRouter();
 
   useEffect(() => {
-    if (user && !isUserLoading) {
-      router.push('/admin-dashboard');
+    if (!isLoading && user && role) {
+      router.replace(`/${role}-dashboard`);
     }
-  }, [user, isUserLoading, router]);
+  }, [user, role, isLoading, router]);
 
-  if (isUserLoading || user) {
+  if (isLoading || user) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <div className="flex flex-col items-center gap-4">

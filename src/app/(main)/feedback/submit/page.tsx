@@ -27,7 +27,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useFeedbackStore } from '@/hooks/use-feedback-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AppLogo } from '@/components/app-logo';
+import { PageHeader } from '@/components/layout/page-header';
 
 const feedbackFormSchema = z.object({
   category: z.enum(['Hostel', 'College'], {
@@ -61,14 +61,13 @@ export default function SubmitFeedbackPage() {
       variant: 'default',
       duration: 5000,
     });
-    router.push('/');
+    router.push('/student-dashboard');
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4">
-      <div className="absolute top-6 left-6">
-        <AppLogo />
-      </div>
+    <>
+    <PageHeader title="Submit Anonymous Feedback" />
+    <div className="flex-1 flex flex-col items-center justify-center p-4">
       <Card className="w-full max-w-2xl">
         <CardHeader>
           <CardTitle className="text-2xl font-headline">Submit Anonymous Feedback</CardTitle>
@@ -121,9 +120,9 @@ export default function SubmitFeedbackPage() {
                   </FormItem>
                 )}
               />
-              <div className="flex justify-between items-center">
+              <div className="flex justify-end items-center gap-2">
                 <Button variant="ghost" asChild>
-                    <Link href="/">Cancel</Link>
+                    <Link href="/student-dashboard">Cancel</Link>
                 </Button>
                 <Button type="submit" disabled={form.formState.isSubmitting}>
                   {form.formState.isSubmitting ? "Submitting..." : "Submit Feedback"}
@@ -134,5 +133,6 @@ export default function SubmitFeedbackPage() {
         </CardContent>
       </Card>
     </div>
+    </>
   );
 }

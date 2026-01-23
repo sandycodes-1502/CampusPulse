@@ -18,11 +18,8 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useAuth, useUser } from '@/firebase';
-import {
-  initiateEmailSignIn,
-  initiateGoogleSignIn,
-} from '@/firebase/non-blocking-login';
+import { useAuth } from '@/firebase';
+import { initiateGoogleSignIn } from '@/firebase/non-blocking-login';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ChromeIcon } from 'lucide-react';
 import Link from 'next/link';
@@ -41,6 +38,7 @@ import { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
+import { useUserRole } from '@/hooks/use-user-role';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
@@ -53,16 +51,16 @@ type FormSchema = z.infer<typeof formSchema>;
 
 export default function LoginPage() {
   const auth = useAuth();
-  const { user, isUserLoading } = useUser();
+  const { user, role, isLoading } = useUserRole();
   const router = useRouter();
   const { toast } = useToast();
-  const [role, setRole] = useState('student');
+  const [selectedRole, setSelectedRole] = useState('student');
 
   useEffect(() => {
-    if (!isUserLoading && user) {
-      router.push('/admin-dashboard');
+    if (!isLoading && user && role) {
+      router.replace(`/${role}-dashboard`);
     }
-  }, [user, isUserLoading, router]);
+  }, [user, role, isLoading, router]);
 
   const form = useForm<FormSchema>({
     resolver: zodResolver(formSchema),
@@ -78,6 +76,7 @@ export default function LoginPage() {
     if (!auth) return;
     try {
       await signInWithEmailAndPassword(auth, data.email, data.password);
+      // On successful login, the useEffect will handle redirection.
     } catch (error: any) {
       if (
         error.code === 'auth/invalid-credential' ||
@@ -101,11 +100,11 @@ export default function LoginPage() {
 
   const handleGoogleSignIn = () => {
     if (!auth) return;
-    sessionStorage.setItem('signupRole', role);
+    sessionStorage.setItem('signupRole', selectedRole);
     initiateGoogleSignIn(auth);
   };
 
-  if (isUserLoading || (!isUserLoading && user)) {
+  if (isLoading || user) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -134,7 +133,7 @@ export default function LoginPage() {
         <CardContent>
           <div className="space-y-2 mb-4">
             <Label htmlFor="role">I am a</Label>
-            <Select defaultValue={role} onValueChange={setRole}>
+            <Select defaultValue={selectedRole} onValueChange={setSelectedRole}>
               <SelectTrigger id="role" className="w-full">
                 <SelectValue placeholder="Select your role" />
               </SelectTrigger>

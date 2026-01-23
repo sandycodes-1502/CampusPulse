@@ -7,9 +7,24 @@ import { MainNav } from '@/components/layout/main-nav';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUserRole } from '@/hooks/use-user-role';
 
-const studentRoutes = ['/student-dashboard', '/outpass', '/feedback', '/fees', '/complaints'];
+const adminRoutes = [
+  '/admin-dashboard',
+  '/rooms',
+  '/outpass',
+  '/fees',
+  '/security',
+  '/complaints',
+  '/feedback',
+  '/announcements',
+];
+const studentRoutes = [
+  '/student-dashboard',
+  '/outpass',
+  '/fees',
+  '/complaints',
+  '/feedback/submit',
+];
 const securityRoutes = ['/security-dashboard', '/security'];
-// Admin can access all routes, so no need for a specific list
 
 export default function AppLayout({
   children,
@@ -26,31 +41,31 @@ export default function AppLayout({
     }
 
     if (!user) {
-      router.push('/login');
+      router.replace('/'); // Redirect unauthenticated users to the public landing page
       return;
     }
-
-    if (role) {
-      const roleDashboard = `/${role}-dashboard`;
-
-      let isAuthorized = false;
-      if (role === 'admin') {
-        isAuthorized = true; // Admins can access everything
-      } else if (role === 'student') {
-        isAuthorized = studentRoutes.some((route) => pathname.startsWith(route));
-      } else if (role === 'security') {
-        isAuthorized = securityRoutes.some((route) => pathname.startsWith(route));
-      }
-
-      if (!isAuthorized) {
-        router.replace(roleDashboard);
-      } else if (pathname === '/admin-dashboard' || pathname === '/student-dashboard' || pathname === '/security-dashboard') {
-        if (pathname !== roleDashboard) {
-            router.replace(roleDashboard);
-        }
-      }
+    
+    // If user is authenticated but role is not yet determined, wait.
+    if (!role) {
+        return;
     }
 
+    const roleDashboard = `/${role}-dashboard`;
+    let allowedRoutes: string[] = [];
+
+    if (role === 'admin') {
+      allowedRoutes = adminRoutes;
+    } else if (role === 'student') {
+      allowedRoutes = studentRoutes;
+    } else if (role === 'security') {
+      allowedRoutes = securityRoutes;
+    }
+
+    const isAuthorized = allowedRoutes.some((route) => pathname.startsWith(route));
+
+    if (!isAuthorized) {
+      router.replace(roleDashboard);
+    }
   }, [user, role, isLoading, router, pathname]);
 
   if (isLoading || !user || !role) {

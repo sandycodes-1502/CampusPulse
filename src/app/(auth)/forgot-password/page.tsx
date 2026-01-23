@@ -23,7 +23,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { useUser } from '@/firebase';
+import { useUserRole } from '@/hooks/use-user-role';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -35,14 +35,14 @@ const formSchema = z.object({
 type FormSchema = z.infer<typeof formSchema>;
 
 export default function ForgotPasswordPage() {
-  const { user, isUserLoading } = useUser();
+  const { user, role, isLoading } = useUserRole();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isUserLoading && user) {
-      router.push('/admin-dashboard');
+    if (!isLoading && user && role) {
+      router.replace(`/${role}-dashboard`);
     }
-  }, [user, isUserLoading, router]);
+  }, [user, role, isLoading, router]);
 
   const form = useForm<FormSchema>({
     resolver: zodResolver(formSchema),
@@ -61,7 +61,7 @@ export default function ForgotPasswordPage() {
     });
   };
 
-  if (isUserLoading || (!isUserLoading && user)) {
+  if (isLoading || user) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <div className="flex flex-col items-center gap-4">

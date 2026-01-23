@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useAuth, useUser } from '@/firebase';
+import { useAuth } from '@/firebase';
 import {
   initiateEmailSignUp,
   initiateGoogleSignIn,
@@ -38,6 +38,7 @@ import { z } from 'zod';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useUserRole } from '@/hooks/use-user-role';
 
 const formSchema = z
   .object({
@@ -60,14 +61,14 @@ type FormSchema = z.infer<typeof formSchema>;
 
 export default function SignupPage() {
   const auth = useAuth();
-  const { user, isUserLoading } = useUser();
+  const { user, role, isLoading } = useUserRole();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isUserLoading && user) {
-      router.push('/admin-dashboard');
+    if (!isLoading && user && role) {
+      router.replace(`/${role}-dashboard`);
     }
-  }, [user, isUserLoading, router]);
+  }, [user, role, isLoading, router]);
 
   const form = useForm<FormSchema>({
     resolver: zodResolver(formSchema),
@@ -97,7 +98,7 @@ export default function SignupPage() {
     initiateGoogleSignIn(auth);
   };
 
-  if (isUserLoading || (!isUserLoading && user)) {
+  if (isLoading || user) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <div className="flex flex-col items-center gap-4">
