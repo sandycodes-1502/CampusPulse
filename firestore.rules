@@ -130,6 +130,16 @@ service cloud.firestore {
       allow update: if isExistingOwner(userId) || (isAdmin() && resource != null);
       allow delete: if false; // User documents should not be deleted by clients.
     }
+    
+    /**
+     * @description Collection group rule for querying across all students.
+     * @path /{path=**}/students/{studentId}
+     * @allow (get, list) An admin can list or get any student document.
+     * @principle Enables admin-level queries across all users for management purposes.
+     */
+    match /{path=**}/students/{studentId} {
+      allow get, list: if isAdmin();
+    }
 
     /**
      * @description Student profile data linked to a user account.

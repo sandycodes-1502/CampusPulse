@@ -2,7 +2,7 @@ export type Announcement = {
   id: string;
   title: string;
   content: string;
-  date: string;
+  postDate: string;
   adminId: string;
 };
 
@@ -54,6 +54,15 @@ export type Room = {
   roomNumber: string;
   capacity: number;
   availability: boolean;
+};
+
+export type Student = {
+    id: string;
+    userId: string;
+    name: string;
+    email: string;
+    hostelRoomId?: string;
+    major?: string;
 };
 
 export type EntryExitLog = {
