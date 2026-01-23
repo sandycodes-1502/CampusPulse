@@ -35,23 +35,47 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AppLogo } from '@/components/app-logo';
-import { useAuth, useUser } from '@/firebase';
+import { useAuth } from '@/firebase';
+import { useUserRole } from '@/hooks/use-user-role';
 
-const menuItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/rooms', label: 'Rooms', icon: BedDouble },
-  { href: '/outpass', label: 'Outpass', icon: Ticket },
-  { href: '/fees', label: 'Fees', icon: CircleDollarSign },
-  { href: '/security', label: 'Security', icon: Shield },
-  { href: '/complaints', label: 'Complaints', icon: FilePenLine },
-  { href: '/feedback', label: 'Feedback', icon: Megaphone },
-  { href: '/announcements', label: 'Announcements', icon: Bell },
+const studentMenuItems = [
+    { href: '/student-dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/outpass', label: 'Outpass', icon: Ticket },
+    { href: '/fees', label: 'Fees', icon: CircleDollarSign },
+    { href: '/complaints', label: 'My Complaints', icon: FilePenLine },
+    { href: '/feedback/submit', label: 'Submit Feedback', icon: Megaphone },
+];
+  
+const securityMenuItems = [
+    { href: '/security-dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/security', label: 'Security Desk', icon: Shield },
+];
+  
+const adminMenuItems = [
+    { href: '/admin-dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/rooms', label: 'Rooms', icon: BedDouble },
+    { href: '/outpass', label: 'Outpass', icon: Ticket },
+    { href: '/fees', label: 'Fees', icon: CircleDollarSign },
+    { href: '/security', label: 'Security', icon: Shield },
+    { href: '/complaints', label: 'Complaints', icon: FilePenLine },
+    { href: '/feedback', label: 'Feedback', icon: Megaphone },
+    { href: '/announcements', label: 'Announcements', icon: Bell },
 ];
 
 export function MainNav() {
   const pathname = usePathname();
   const auth = useAuth();
-  const { user } = useUser();
+  const { user, role } = useUserRole();
+
+  let menuItems = [];
+  if (role === 'admin') {
+    menuItems = adminMenuItems;
+  } else if (role === 'security') {
+    menuItems = securityMenuItems;
+  } else if (role === 'student') {
+    menuItems = studentMenuItems;
+  }
+
 
   return (
     <Sidebar>

@@ -39,6 +39,8 @@ import { Label } from '@/components/ui/label';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
@@ -53,11 +55,12 @@ export default function LoginPage() {
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
   const router = useRouter();
+  const { toast } = useToast();
   const [role, setRole] = useState('student');
 
   useEffect(() => {
     if (!isUserLoading && user) {
-      router.push('/dashboard');
+      router.push('/admin-dashboard');
     }
   }, [user, isUserLoading, router]);
 
@@ -71,9 +74,29 @@ export default function LoginPage() {
 
   const { isSubmitting, isValid } = form.formState;
 
-  const onSubmit = (data: FormSchema) => {
+  const onSubmit = async (data: FormSchema) => {
     if (!auth) return;
-    initiateEmailSignIn(auth, data.email, data.password);
+    try {
+      await signInWithEmailAndPassword(auth, data.email, data.password);
+    } catch (error: any) {
+      if (
+        error.code === 'auth/invalid-credential' ||
+        error.code === 'auth/wrong-password' ||
+        error.code === 'auth/user-not-found'
+      ) {
+        toast({
+          variant: 'destructive',
+          title: 'Login Failed',
+          description: 'Invalid email or password. Please try again.',
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'An error occurred',
+          description: error.message,
+        });
+      }
+    }
   };
 
   const handleGoogleSignIn = () => {

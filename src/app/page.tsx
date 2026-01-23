@@ -21,7 +21,7 @@ export default function Home() {
 
   useEffect(() => {
     if (user && !isUserLoading) {
-      router.push('/dashboard');
+      router.push('/admin-dashboard');
     }
   }, [user, isUserLoading, router]);
 
