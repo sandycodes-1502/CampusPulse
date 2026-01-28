@@ -10,7 +10,7 @@ export type Complaint = {
   id: string;
   studentId: string;
   studentName: string;
-  roomNumber: string;
+  roomNumber?: string;
   complaintText: string;
   submissionDate: string;
   status: 'open' | 'in progress' | 'resolved';

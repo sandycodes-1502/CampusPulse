@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Loader, Wand2, Inbox } from 'lucide-react';
-import { collectionGroup, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy } from 'firebase/firestore';
 
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -30,7 +30,7 @@ export function FeedbackAnalysis() {
   const feedbackQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
-      collectionGroup(firestore, 'feedback'),
+      collection(firestore, 'submitted_feedback'),
       orderBy('submissionDate', 'desc')
     );
   }, [firestore]);
@@ -205,4 +205,3 @@ export function FeedbackAnalysis() {
     </div>
   );
 }
-    

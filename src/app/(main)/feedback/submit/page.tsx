@@ -60,8 +60,8 @@ export default function SubmitFeedbackPage() {
     if (!firestore) return;
 
     // Since auth is removed, we can't tie feedback to a specific user.
-    // We'll use a general 'feedback' collection.
-    const feedbackCollectionRef = collection(firestore, 'feedback');
+    // We'll use a general 'submitted_feedback' collection to avoid collection group conflicts.
+    const feedbackCollectionRef = collection(firestore, 'submitted_feedback');
 
     addDocumentNonBlocking(feedbackCollectionRef, {
       studentId: 'anonymous', // Hardcoded as auth is removed
