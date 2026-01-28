@@ -25,16 +25,8 @@ import { ChromeIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -54,7 +46,6 @@ export default function LoginPage() {
   const { user, role, isLoading } = useUserRole();
   const router = useRouter();
   const { toast } = useToast();
-  const [selectedRole, setSelectedRole] = useState('student');
 
   useEffect(() => {
     if (!isLoading && user && role) {
@@ -100,7 +91,8 @@ export default function LoginPage() {
 
   const handleGoogleSignIn = () => {
     if (!auth) return;
-    sessionStorage.setItem('signupRole', selectedRole);
+    // Set role to student for any new user signing up via Google on the login page.
+    sessionStorage.setItem('signupRole', 'student');
     initiateGoogleSignIn(auth);
   };
 
@@ -138,19 +130,6 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2 mb-4">
-            <Label htmlFor="role">I am a</Label>
-            <Select defaultValue={selectedRole} onValueChange={setSelectedRole}>
-              <SelectTrigger id="role" className="w-full">
-                <SelectValue placeholder="Select your role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="student">Student</SelectItem>
-                <SelectItem value="security">Security</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField

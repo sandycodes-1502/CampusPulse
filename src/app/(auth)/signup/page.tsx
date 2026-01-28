@@ -18,18 +18,8 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useAuth } from '@/firebase';
-import {
-  initiateEmailSignUp,
-  initiateGoogleSignIn,
-} from '@/firebase/non-blocking-login';
+import { initiateGoogleSignIn } from '@/firebase/non-blocking-login';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ChromeIcon } from 'lucide-react';
 import Link from 'next/link';
@@ -39,6 +29,8 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUserRole } from '@/hooks/use-user-role';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z
   .object({
@@ -48,9 +40,6 @@ const formSchema = z
       .string()
       .min(8, { message: 'Password must be at least 8 characters long' }),
     confirmPassword: z.string(),
-    role: z.enum(['student', 'security'], {
-      required_error: 'Please select a role.',
-    }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Passwords do not match',
@@ -63,6 +52,7 @@ export default function SignupPage() {
   const auth = useAuth();
   const { user, role, isLoading } = useUserRole();
   const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!isLoading && user && role) {
@@ -77,23 +67,38 @@ export default function SignupPage() {
       email: '',
       password: '',
       confirmPassword: '',
-      role: 'student',
     },
   });
 
   const { isSubmitting, isValid } = form.formState;
 
-  const onSubmit = (data: FormSchema) => {
+  const onSubmit = async (data: FormSchema) => {
     if (!auth) return;
-    sessionStorage.setItem('signupRole', data.role);
-    sessionStorage.setItem('signupName', data.name);
-    initiateEmailSignUp(auth, data.email, data.password);
+    try {
+      sessionStorage.setItem('signupRole', 'student');
+      sessionStorage.setItem('signupName', data.name);
+      await createUserWithEmailAndPassword(auth, data.email, data.password);
+      // On successful signup, the useEffect will handle redirection.
+    } catch (error: any) {
+      if (error.code === 'auth/email-already-in-use') {
+        toast({
+          variant: 'destructive',
+          title: 'Signup Failed',
+          description: 'This email address is already in use.',
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'An error occurred',
+          description: error.message,
+        });
+      }
+    }
   };
 
   const handleGoogleSignIn = () => {
     if (!auth) return;
-    const role = form.getValues('role');
-    sessionStorage.setItem('signupRole', role);
+    sessionStorage.setItem('signupRole', 'student');
     sessionStorage.removeItem('signupName'); // Name will be picked from Google profile
     initiateGoogleSignIn(auth);
   };
@@ -125,7 +130,7 @@ export default function SignupPage() {
         <CardHeader>
           <CardTitle>Create an account</CardTitle>
           <CardDescription>
-            Enter your details to create an account
+            Enter your details to create a student account.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -194,31 +199,6 @@ export default function SignupPage() {
                         {...field}
                       />
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="role"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>I am a</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a role" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="student">Student</SelectItem>
-                        <SelectItem value="security">Security</SelectItem>
-                      </SelectContent>
-                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
