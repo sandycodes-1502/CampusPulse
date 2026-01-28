@@ -6,6 +6,7 @@ import {
   orderBy,
   doc,
   collectionGroup,
+  limit,
 } from 'firebase/firestore';
 import { MoreHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -50,7 +51,8 @@ export default function ComplaintsPage() {
     // Default to admin view since auth is removed
     return query(
       collectionGroup(firestore, 'complaints'),
-      orderBy('submissionDate', 'desc')
+      orderBy('submissionDate', 'desc'),
+      limit(50)
     );
   }, [firestore]);
 
