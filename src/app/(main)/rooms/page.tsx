@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { collection, collectionGroup, query } from 'firebase/firestore';
+import { collection, collectionGroup, query, orderBy } from 'firebase/firestore';
 
 import { PageHeader } from '@/components/layout/page-header';
 import {
@@ -30,14 +30,14 @@ export default function RoomsPage() {
 
   const roomsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'hostel_rooms'));
+    return query(collection(firestore, 'hostel_rooms'), orderBy('roomNumber'));
   }, [firestore]);
 
   const studentsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     // This is a collection group query to get all students from all users.
     // Firestore security rules must allow this for the admin role.
-    return query(collectionGroup(firestore, 'students'));
+    return query(collectionGroup(firestore, 'students'), orderBy('name'));
   }, [firestore]);
 
   const { data: rooms, isLoading: isLoadingRooms } =

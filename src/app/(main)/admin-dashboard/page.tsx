@@ -102,12 +102,12 @@ export default function AdminDashboardPage() {
 
   const studentsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collectionGroup(firestore, 'students'));
+    return query(collectionGroup(firestore, 'students'), orderBy('name'));
   }, [firestore]);
 
   const roomsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'hostel_rooms'));
+    return query(collection(firestore, 'hostel_rooms'), orderBy('roomNumber'));
   }, [firestore]);
 
   const pendingOutpassesQuery = useMemoFirebase(() => {
@@ -404,4 +404,3 @@ export default function AdminDashboardPage() {
     </>
   );
 }
-    
