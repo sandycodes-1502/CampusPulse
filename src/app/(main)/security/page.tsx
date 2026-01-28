@@ -4,7 +4,6 @@ import { useState } from 'react';
 import {
   collectionGroup,
   doc,
-  addDoc,
   serverTimestamp,
   query,
   where,
@@ -26,7 +25,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 
-import { useFirestore, useUser } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
 import {
@@ -243,7 +242,6 @@ function OutpassVerification() {
 
 function EntryExitLogging() {
   const firestore = useFirestore();
-  const { user } = useUser();
   const { toast } = useToast();
 
   const logsQuery = useMemoFirebase(() => {
@@ -255,7 +253,7 @@ function EntryExitLogging() {
 
   const handleManualLog = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!firestore || !user) return;
+    if (!firestore) return;
 
     const formData = new FormData(event.currentTarget);
     const studentId = formData.get('studentId') as string;
@@ -266,7 +264,7 @@ function EntryExitLogging() {
         studentId,
         type,
         dateTime: serverTimestamp(),
-        recordedBySecurityId: user.uid,
+        recordedBySecurityId: 'security_desk', // Hardcoded as auth is removed
       });
       toast({ title: 'Log recorded successfully.' });
       (event.target as HTMLFormElement).reset();

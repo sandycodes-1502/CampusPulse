@@ -10,7 +10,6 @@ import {
 import { MoreHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { useUserRole } from '@/hooks/use-user-role';
 import { PageHeader } from '@/components/layout/page-header';
 import {
   Card,
@@ -45,27 +44,15 @@ import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 export default function ComplaintsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const { user, role } = useUserRole();
-
+  
   const complaintsQuery = useMemoFirebase(() => {
-    if (!firestore || !user || !role) return null;
-
-    if (role === 'student') {
-      return query(
-        collection(firestore, 'users', user.uid, 'complaints'),
-        orderBy('submissionDate', 'desc')
-      );
-    }
-
-    if (role === 'admin') {
-      return query(
-        collectionGroup(firestore, 'complaints'),
-        orderBy('submissionDate', 'desc')
-      );
-    }
-
-    return null; // For security role or if role is not determined yet
-  }, [firestore, user, role]);
+    if (!firestore) return null;
+    // Default to admin view since auth is removed
+    return query(
+      collectionGroup(firestore, 'complaints'),
+      orderBy('submissionDate', 'desc')
+    );
+  }, [firestore]);
 
   const { data: complaints, isLoading } =
     useCollection<Complaint>(complaintsQuery);
@@ -80,7 +67,7 @@ export default function ComplaintsPage() {
     toast({ title: `Complaint status updated to ${status}.` });
   };
   
-  const canManage = role === 'admin';
+  const canManage = true; // Auth removed, default to admin view
 
   return (
     <>
@@ -231,4 +218,3 @@ export default function ComplaintsPage() {
     </>
   );
 }
-    

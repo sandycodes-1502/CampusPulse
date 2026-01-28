@@ -1,10 +1,9 @@
 'use client';
 
 import { useMemo } from 'react';
-import { collection, query, where, collectionGroup } from 'firebase/firestore';
+import { collectionGroup, query } from 'firebase/firestore';
 
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { useUserRole } from '@/hooks/use-user-role';
 import { PageHeader } from '@/components/layout/page-header';
 import {
   Table,
@@ -20,21 +19,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
 export default function FeesPage() {
-  const { user, role } = useUserRole();
   const firestore = useFirestore();
 
   const feesQuery = useMemoFirebase(() => {
-    if (!firestore || !user || !role) return null;
-    if (role === 'student') {
-      return query(
-        collection(firestore, 'users', user.uid, 'hostel_fees')
-      );
-    }
-    if (role === 'admin') {
-      return query(collectionGroup(firestore, 'hostel_fees'));
-    }
-    return null;
-  }, [firestore, user, role]);
+    if (!firestore) return null;
+    // Default to admin view since auth is removed
+    return query(collectionGroup(firestore, 'hostel_fees'));
+  }, [firestore]);
 
   const { data: fees, isLoading } = useCollection<Fee>(feesQuery);
 
@@ -116,4 +107,3 @@ export default function FeesPage() {
     </>
   );
 }
-    

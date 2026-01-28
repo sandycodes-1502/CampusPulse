@@ -2,19 +2,16 @@
 
 import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
-import { useUser } from '@/firebase';
 import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
 export default function StudentDashboardPage() {
-  const { user } = useUser();
-
   return (
     <>
       <PageHeader title="Student Dashboard" />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
         <div className="grid gap-4">
-          <h1 className="text-2xl font-bold">Welcome, {user?.displayName || 'Student'}!</h1>
+          <h1 className="text-2xl font-bold">Welcome, Student!</h1>
           <p className="text-muted-foreground">
             Here you can manage your outpasses, submit feedback, and check your fee status.
           </p>

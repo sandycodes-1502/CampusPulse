@@ -16,7 +16,6 @@ import {
   useCollection,
   useMemoFirebase,
 } from '@/firebase';
-import { useUserRole } from '@/hooks/use-user-role';
 import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
 import {
@@ -45,7 +44,6 @@ import {
 
 export default function AnnouncementsPage() {
   const firestore = useFirestore();
-  const { role } = useUserRole();
   const { toast } = useToast();
 
   const announcementsQuery = useMemoFirebase(() => {
@@ -66,7 +64,7 @@ export default function AnnouncementsPage() {
     toast({ title: 'Announcement deleted.' });
   };
 
-  const canManage = role === 'admin';
+  const canManage = true; // Auth removed, default to admin view
 
   return (
     <>

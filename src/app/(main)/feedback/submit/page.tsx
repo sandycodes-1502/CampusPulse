@@ -26,7 +26,6 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { useUserRole } from '@/hooks/use-user-role';
 import { useFirestore, addDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageHeader } from '@/components/layout/page-header';
@@ -49,7 +48,6 @@ export default function SubmitFeedbackPage() {
   const router = useRouter();
   const { toast } = useToast();
   const firestore = useFirestore();
-  const { user } = useUserRole();
 
   const form = useForm<FeedbackFormValues>({
     resolver: zodResolver(feedbackFormSchema),
@@ -59,13 +57,15 @@ export default function SubmitFeedbackPage() {
   });
 
   function onSubmit(data: FeedbackFormValues) {
-    if (!firestore || !user) return;
+    if (!firestore) return;
 
-    const feedbackCollectionRef = collection(firestore, 'users', user.uid, 'feedback');
+    // Since auth is removed, we can't tie feedback to a specific user.
+    // We'll use a general 'feedback' collection.
+    const feedbackCollectionRef = collection(firestore, 'feedback');
 
     addDocumentNonBlocking(feedbackCollectionRef, {
-      studentId: user.uid,
-      studentName: user.displayName,
+      studentId: 'anonymous', // Hardcoded as auth is removed
+      studentName: 'Anonymous', // Hardcoded as auth is removed
       feedbackText: data.feedback,
       category: data.category,
       submissionDate: new Date().toISOString(),
@@ -172,4 +172,3 @@ export default function SubmitFeedbackPage() {
     </>
   );
 }
-    

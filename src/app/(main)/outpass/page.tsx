@@ -1,18 +1,15 @@
 'use client';
 
 import {
-  collection,
   query,
   orderBy,
   doc,
   collectionGroup,
 } from 'firebase/firestore';
-import { MoreHorizontal, PlusCircle } from 'lucide-react';
-import Link from 'next/link';
+import { MoreHorizontal } from 'lucide-react';
 import { format } from 'date-fns';
 
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { useUserRole } from '@/hooks/use-user-role';
 import { PageHeader } from '@/components/layout/page-header';
 import {
   Card,
@@ -45,27 +42,16 @@ import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 
 export default function OutpassPage() {
-  const { user, role } = useUserRole();
   const firestore = useFirestore();
   const { toast } = useToast();
 
   const outpassesQuery = useMemoFirebase(() => {
-    if (!firestore || !user || !role) return null;
+    if (!firestore) return null;
     
-    if (role === 'student') {
-      return query(
-        collection(firestore, 'users', user.uid, 'outpasses'),
-        orderBy('departureDateTime', 'desc')
-      );
-    }
+    // Default to admin/security view since auth is removed
+    return query(collectionGroup(firestore, 'outpasses'), orderBy('departureDateTime', 'desc'));
     
-    // Admin and Security can see all outpasses via a collection group query.
-    if (role === 'admin' || role === 'security') {
-      return query(collectionGroup(firestore, 'outpasses'), orderBy('departureDateTime', 'desc'));
-    }
-    
-    return null;
-  }, [firestore, user, role]);
+  }, [firestore]);
 
   const { data: outpasses, isLoading } = useCollection<Outpass>(outpassesQuery);
 
@@ -76,19 +62,12 @@ export default function OutpassPage() {
     toast({ title: `Outpass has been ${status}.` });
   };
 
-  const isActionable = role === 'admin' || role === 'security';
+  const isActionable = true; // Default to admin/security view
 
   return (
     <>
       <PageHeader title="Digital Outpass">
-        {role === 'student' && (
-          <Button asChild>
-            <Link href="#">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              New Outpass Request
-            </Link>
-          </Button>
-        )}
+        {/* "New Outpass" button removed as it's a student-specific action */}
       </PageHeader>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <Card>
