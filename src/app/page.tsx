@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import Link from "next/link";
 import {
   ArrowRight,
@@ -5,22 +6,61 @@ import {
   User,
   UserCog,
 } from "lucide-react";
+=======
+'use client';
+>>>>>>> 1bce9a085911f85826f019179c767ebab116ce61
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AppLogo } from "@/components/app-logo";
-import { placeholderImages } from "@/lib/placeholder-images";
+import Link from 'next/link';
+import Image from 'next/image';
+import { ArrowRight, ShieldCheck, User, UserCog } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AppLogo } from '@/components/app-logo';
+import { placeholderImages } from '@/lib/placeholder-images';
+import { useUserRole } from '@/hooks/use-user-role';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function Home() {
-  const heroImage = placeholderImages.find(p => p.id === "landing-hero");
+  const heroImage = placeholderImages.find((p) => p.id === 'landing-hero');
+  const { user, role, isLoading } = useUserRole();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && user && role) {
+      router.replace(`/${role}-dashboard`);
+    }
+  }, [user, role, isLoading, router]);
+
+  if (isLoading || user) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Skeleton className="h-12 w-12 rounded-full" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-[250px]" />
+            <Skeleton className="h-4 w-[200px]" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen">
       <header className="container mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
         <AppLogo />
         <Button asChild>
+<<<<<<< HEAD
           <Link href="/dashboard">
             Go to App <ArrowRight className="ml-2 h-4 w-4" />
+=======
+          <Link href="/login">
+            Login
+            <ArrowRight className="ml-2 h-4 w-4" />
+>>>>>>> 1bce9a085911f85826f019179c767ebab116ce61
           </Link>
         </Button>
       </header>
@@ -38,8 +78,8 @@ export default function Home() {
             </p>
             <div className="mt-10">
               <Button size="lg" asChild>
-                <Link href="/dashboard">
-                  Explore The Admin Dashboard
+                <Link href="/signup">
+                  Get Started
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
@@ -84,11 +124,14 @@ export default function Home() {
                     Request outpasses, check fee status, submit feedback, and
                     raise complaints with ease.
                   </p>
+<<<<<<< HEAD
                   <Button variant="outline" className="mt-6" asChild>
                     <Link href="/dashboard">
                       Enter Portal <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>
+=======
+>>>>>>> 1bce9a085911f85826f019179c767ebab116ce61
                 </CardContent>
               </Card>
 
@@ -106,11 +149,14 @@ export default function Home() {
                     Verify outpasses in real-time and maintain accurate student
                     entry/exit logs.
                   </p>
+<<<<<<< HEAD
                   <Button variant="outline" className="mt-6" asChild>
                     <Link href="/dashboard">
                       Access Desk <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>
+=======
+>>>>>>> 1bce9a085911f85826f019179c767ebab116ce61
                 </CardContent>
               </Card>
 
@@ -128,11 +174,14 @@ export default function Home() {
                     Manage all campus operations, view analytics, and post
                     announcements.
                   </p>
+<<<<<<< HEAD
                   <Button variant="outline" className="mt-6" asChild>
                     <Link href="/dashboard">
                       Open Dashboard <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>
+=======
+>>>>>>> 1bce9a085911f85826f019179c767ebab116ce61
                 </CardContent>
               </Card>
             </div>

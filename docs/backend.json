@@ -1,0 +1,643 @@
+{
+  "entities": {
+    "Student": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Student",
+      "type": "object",
+      "description": "Represents a student in the CampusPulse system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Student entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:1 Student)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The student's full name."
+        },
+        "email": {
+          "type": "string",
+          "description": "The student's email address.",
+          "format": "email"
+        },
+        "hostelRoomId": {
+          "type": "string",
+          "description": "Reference to HostelRoom. (Relationship: HostelRoom 1:N Student)"
+        },
+        "major": {
+          "type": "string",
+          "description": "The student's major field of study."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "name",
+        "email"
+      ]
+    },
+    "Security": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Security",
+      "type": "object",
+      "description": "Represents a security personnel in the CampusPulse system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Security entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:1 Security)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The security personnel's full name."
+        },
+        "email": {
+          "type": "string",
+          "description": "The security personnel's email address.",
+          "format": "email"
+        },
+        "employeeId": {
+          "type": "string",
+          "description": "The security personnel's employee ID."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "name",
+        "email"
+      ]
+    },
+    "Admin": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Admin",
+      "type": "object",
+      "description": "Represents an administrator in the CampusPulse system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Admin entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:1 Admin)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The administrator's full name."
+        },
+        "email": {
+          "type": "string",
+          "description": "The administrator's email address.",
+          "format": "email"
+        },
+        "employeeId": {
+          "type": "string",
+          "description": "The administrator's employee ID."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "name",
+        "email"
+      ]
+    },
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user in the CampusPulse system. Used for authentication and authorization.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address.",
+          "format": "email"
+        },
+        "role": {
+          "type": "string",
+          "description": "The user's role (e.g., student, security, admin)."
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "role"
+      ]
+    },
+    "HostelRoom": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "HostelRoom",
+      "type": "object",
+      "description": "Represents a room in the hostel.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the HostelRoom entity."
+        },
+        "roomNumber": {
+          "type": "string",
+          "description": "The room number."
+        },
+        "capacity": {
+          "type": "number",
+          "description": "The maximum number of students that can occupy the room."
+        },
+        "availability": {
+          "type": "boolean",
+          "description": "Indicates whether the room is currently available."
+        }
+      },
+      "required": [
+        "id",
+        "roomNumber",
+        "capacity",
+        "availability"
+      ]
+    },
+    "Outpass": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Outpass",
+      "type": "object",
+      "description": "Represents an outpass request made by a student.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Outpass entity."
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Reference to Student. (Relationship: Student 1:N Outpass)"
+        },
+        "studentName": {
+          "type": "string",
+          "description": "Denormalized full name of the student for display purposes."
+        },
+        "roomNumber": {
+          "type": "string",
+          "description": "Denormalized room number of the student."
+        },
+        "reason": {
+          "type": "string",
+          "description": "The reason for requesting the outpass."
+        },
+        "departureDateTime": {
+          "type": "string",
+          "description": "The date and time of departure.",
+          "format": "date-time"
+        },
+        "returnDateTime": {
+          "type": "string",
+          "description": "The expected date and time of return.",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "The status of the outpass request (e.g., pending, approved, rejected, used).",
+          "enum": ["pending", "approved", "rejected", "used"]
+        },
+        "approvedBySecurityId": {
+          "type": "string",
+          "description": "Reference to Security. (Relationship: Security 1:N Outpass) The security personnel who approved the outpass, if applicable."
+        }
+      },
+      "required": [
+        "id",
+        "studentId",
+        "studentName",
+        "reason",
+        "departureDateTime",
+        "returnDateTime",
+        "status"
+      ]
+    },
+    "EntryExitLog": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "EntryExitLog",
+      "type": "object",
+      "description": "Represents a record of a student entering or exiting the campus/hostel.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the EntryExitLog entity."
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Reference to Student. (Relationship: Student 1:N EntryExitLog)"
+        },
+        "dateTime": {
+          "type": "string",
+          "description": "The date and time of the entry/exit.",
+          "format": "date-time"
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of log (e.g., entry, exit)."
+        },
+        "recordedBySecurityId": {
+          "type": "string",
+          "description": "Reference to Security. (Relationship: Security 1:N EntryExitLog) The security personnel who recorded the entry/exit."
+        }
+      },
+      "required": [
+        "id",
+        "studentId",
+        "dateTime",
+        "type"
+      ]
+    },
+    "HostelFee": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "HostelFee",
+      "type": "object",
+      "description": "Represents a fee payment made by a student for hostel services.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the HostelFee entity."
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Reference to Student. (Relationship: Student 1:N HostelFee)"
+        },
+        "studentName": {
+          "type": "string",
+          "description": "Denormalized full name of the student for display purposes."
+        },
+        "amount": {
+          "type": "number",
+          "description": "The amount of the fee."
+        },
+        "paymentDate": {
+          "type": "string",
+          "description": "The date the payment was made.",
+          "format": "date-time"
+        },
+        "dueDate": {
+          "type": "string",
+          "description": "The due date for the fee payment.",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "The status of the fee payment (e.g., paid, unpaid, overdue)."
+        }
+      },
+      "required": [
+        "id",
+        "studentId",
+        "studentName",
+        "amount",
+        "paymentDate",
+        "dueDate",
+        "status"
+      ]
+    },
+    "Complaint": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Complaint",
+      "type": "object",
+      "description": "Represents a complaint lodged by a student.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Complaint entity."
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Reference to Student. (Relationship: Student 1:N Complaint)"
+        },
+        "studentName": {
+          "type": "string",
+          "description": "Denormalized full name of the student for display purposes."
+        },
+        "roomNumber": {
+          "type": "string",
+          "description": "Denormalized room number of the student."
+        },
+        "complaintText": {
+          "type": "string",
+          "description": "The text of the complaint."
+        },
+        "submissionDate": {
+          "type": "string",
+          "description": "The date the complaint was submitted.",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "The status of the complaint (e.g., open, in progress, resolved).",
+          "enum": ["open", "in progress", "resolved"]
+        },
+        "adminId": {
+          "type": "string",
+          "description": "Reference to Admin. (Relationship: Admin 1:N Complaint) The admin who is handling the complaint."
+        }
+      },
+      "required": [
+        "id",
+        "studentId",
+        "studentName",
+        "complaintText",
+        "submissionDate",
+        "status"
+      ]
+    },
+    "Feedback": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Feedback",
+      "type": "object",
+      "description": "Represents feedback submitted by a student.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Feedback entity."
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Reference to Student. (Relationship: Student 1:N Feedback)"
+        },
+        "studentName": {
+          "type": "string",
+          "description": "Denormalized full name of the student for display purposes."
+        },
+        "feedbackText": {
+          "type": "string",
+          "description": "The text of the feedback."
+        },
+        "submissionDate": {
+          "type": "string",
+          "description": "The date the feedback was submitted.",
+          "format": "date-time"
+        },
+        "category": {
+          "type": "string",
+          "description": "The category of feedback (e.g., hostel, college facilities)."
+        }
+      },
+      "required": [
+        "id",
+        "studentId",
+        "studentName",
+        "feedbackText",
+        "submissionDate",
+        "category"
+      ]
+    },
+    "Announcement": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Announcement",
+      "type": "object",
+      "description": "Represents an announcement or notice posted by an administrator.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Announcement entity."
+        },
+        "adminId": {
+          "type": "string",
+          "description": "Reference to Admin. (Relationship: Admin 1:N Announcement)"
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the announcement."
+        },
+        "content": {
+          "type": "string",
+          "description": "The content of the announcement."
+        },
+        "postDate": {
+          "type": "string",
+          "description": "The date the announcement was posted.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "adminId",
+        "title",
+        "content",
+        "postDate"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous",
+      "google.com"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user authentication and role information.  The 'userId' parameter is the Firebase Authentication UID.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The Firebase Authentication UID of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/students/{studentId}",
+        "definition": {
+          "entityName": "Student",
+          "schema": {
+            "$ref": "#/backend/entities/Student"
+          },
+          "description": "Stores student profile information, linked to a specific user.  The 'userId' parameter must match the 'userId' field in the student document. The document itself must contain the `userId` for security rule evaluation.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The Firebase Authentication UID of the user."
+            },
+            {
+              "name": "studentId",
+              "description": "The unique ID of the student."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/roles_admin/{userId}",
+        "definition": {
+          "entityName": "Admin",
+          "schema": {
+            "$ref": "#/backend/entities/Admin"
+          },
+          "description": "Indicates that a user has the 'admin' role. The existence of a document at this path grants admin privileges.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The Firebase Authentication UID of the admin user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/roles_security/{userId}",
+        "definition": {
+          "entityName": "Security",
+          "schema": {
+            "$ref": "#/backend/entities/Security"
+          },
+          "description": "Indicates that a user has the 'security' role. The existence of a document at this path grants security privileges.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The Firebase Authentication UID of the security user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/hostel_rooms/{hostelRoomId}",
+        "definition": {
+          "entityName": "HostelRoom",
+          "schema": {
+            "$ref": "#/backend/entities/HostelRoom"
+          },
+          "description": "Stores information about hostel rooms.",
+          "params": [
+            {
+              "name": "hostelRoomId",
+              "description": "The unique ID of the hostel room."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/outpasses/{outpassId}",
+        "definition": {
+          "entityName": "Outpass",
+          "schema": {
+            "$ref": "#/backend/entities/Outpass"
+          },
+          "description": "Stores a student's outpass requests. The `userId` must match the `studentId` on the document.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The Firebase Authentication UID of the user."
+            },
+            {
+              "name": "outpassId",
+              "description": "The unique ID of the outpass request."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/entry_exit_logs/{entryExitLogId}",
+        "definition": {
+          "entityName": "EntryExitLog",
+          "schema": {
+            "$ref": "#/backend/entities/EntryExitLog"
+          },
+          "description": "Stores entry/exit logs. While top-level, security rules must check against roles_security and studentId.",
+          "params": [
+            {
+              "name": "entryExitLogId",
+              "description": "The unique ID of the entry/exit log."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/hostel_fees/{hostelFeeId}",
+        "definition": {
+          "entityName": "HostelFee",
+          "schema": {
+            "$ref": "#/backend/entities/HostelFee"
+          },
+          "description": "Stores a student's hostel fee records.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The Firebase Authentication UID of the user."
+            },
+            {
+              "name": "hostelFeeId",
+              "description": "The unique ID of the hostel fee record."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/complaints/{complaintId}",
+        "definition": {
+          "entityName": "Complaint",
+          "schema": {
+            "$ref": "#/backend/entities/Complaint"
+          },
+          "description": "Stores a student's complaints.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The Firebase Authentication UID of the user."
+            },
+            {
+              "name": "complaintId",
+              "description": "The unique ID of the complaint."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/feedback/{feedbackId}",
+        "definition": {
+          "entityName": "Feedback",
+          "schema": {
+            "$ref": "#/backend/entities/Feedback"
+          },
+          "description": "Stores a student's feedback submissions.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The Firebase Authentication UID of the user."
+            },
+            {
+              "name": "feedbackId",
+              "description": "The unique ID of the feedback."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/announcements/{announcementId}",
+        "definition": {
+          "entityName": "Announcement",
+          "schema": {
+            "$ref": "#/backend/entities/Announcement"
+          },
+          "description": "Stores announcements.  Admin role is required to create/modify.",
+          "params": [
+            {
+              "name": "announcementId",
+              "description": "The unique ID of the announcement."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to provide a secure, scalable, and easily maintainable system for CampusPulse, focusing on authorization independence and clear access patterns. User roles (student, admin, security) are managed using dedicated collections for each role, with user authentication handled by Firebase Authentication. Data is structured to support efficient querying and minimize the need for complex security rules.\\n\\n**Authorization Independence (CRITICAL):**  Authorization is achieved through a combination of path-based ownership and membership maps, denormalized where necessary to avoid `get()` calls in security rules. For example, Outpass documents are stored under `/users/{userId}/outpasses/{outpassId}`, and the studentId is redundantly stored on the document itself. Any security rules needing to check studentId only need to read the document itself and `request.auth.uid`.\\n\\n**Structural Segregation (Homogeneous Security Posture):** Data with different access requirements is stored in separate collections. User profiles (Student, Security, Admin) are stored in their respective collections, ensuring that security rules for each role are specific and clear.\\n\\n**Access Modeling (Standardization and Consistency):**\\n*   **Private Data:** User-specific data (e.g., Outpasses, Complaints, Feedback) is stored under the `/users/{userId}` path, ensuring that only the user has access to their data.  The userId is redundantly stored on the document itself.\\n*   **Global Roles (DBAC):** Dedicated collections `/roles_admin/{uid}`, `/roles_security/{uid}` are used to define admin and security roles. The existence of a document in these collections grants the corresponding role. Student role is implicit in the users/{uid}/students/{studentId} structure.\\n\\n**QAPs Support:**\\n*   Secure `list` operations are supported by the structural segregation. For example, listing outpasses is restricted to the owner using the path `/users/{userId}/outpasses`. Admins can list all outpasses but only if they have a document present at `/roles_admin/{userId}`\\n\\nInvariants such as ownership, timestamps, and denormalized data can be enforced through Firestore security rules and server-side functions.\\n\\nThis structure facilitates simple, robust, and easily debuggable security rules, aligning with the core design principles and strategy mandates."
+  }
+}
+    

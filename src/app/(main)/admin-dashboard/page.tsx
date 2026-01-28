@@ -79,7 +79,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-export default function DashboardPage() {
+export default function AdminDashboardPage() {
   const firestore = useFirestore();
 
   const announcementsQuery = useMemoFirebase(() => {
@@ -94,7 +94,7 @@ export default function DashboardPage() {
   const complaintsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
-      collection(firestore, 'complaints'),
+      collectionGroup(firestore, 'complaints'),
       orderBy('submissionDate', 'desc'),
       limit(5)
     );
@@ -113,7 +113,7 @@ export default function DashboardPage() {
   const pendingOutpassesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
-      collection(firestore, 'outpasses'),
+      collectionGroup(firestore, 'outpasses'),
       where('status', '==', 'pending')
     );
   }, [firestore]);
@@ -121,7 +121,7 @@ export default function DashboardPage() {
   const activeComplaintsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
-      collection(firestore, 'complaints'),
+      collectionGroup(firestore, 'complaints'),
       where('status', 'in', ['open', 'in progress'])
     );
   }, [firestore]);
@@ -145,7 +145,7 @@ export default function DashboardPage() {
       students.map((s) => s.hostelRoomId).filter(Boolean)
     );
     return occupiedRoomIds.size;
-  }, [students]);
+  }, [students, rooms]);
 
   const isLoadingStats =
     isLoadingStudents ||
@@ -155,7 +155,7 @@ export default function DashboardPage() {
 
   return (
     <>
-      <PageHeader title="Dashboard" />
+      <PageHeader title="Admin Dashboard" />
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
@@ -192,7 +192,7 @@ export default function DashboardPage() {
                 </div>
               )}
               <p className="text-xs text-muted-foreground">
-                {rooms && rooms.length > 0
+                {rooms && rooms.length > 0 && roomsOccupiedCount > 0
                   ? `${Math.round(
                       (roomsOccupiedCount / rooms.length) * 100
                     )}% occupancy rate`
@@ -404,3 +404,4 @@ export default function DashboardPage() {
     </>
   );
 }
+    
