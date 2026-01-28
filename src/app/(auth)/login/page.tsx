@@ -19,7 +19,6 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/firebase';
-import { initiateGoogleSignIn } from '@/firebase/non-blocking-login';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ChromeIcon } from 'lucide-react';
 import Link from 'next/link';
@@ -28,7 +27,7 @@ import { z } from 'zod';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithRedirect } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/use-user-role';
 
@@ -67,6 +66,10 @@ export default function LoginPage() {
     if (!auth) return;
     try {
       await signInWithEmailAndPassword(auth, data.email, data.password);
+      toast({
+        title: 'Login Successful',
+        description: 'Welcome back!',
+      });
       // On successful login, the useEffect will handle redirection.
     } catch (error: any) {
       if (
@@ -88,12 +91,19 @@ export default function LoginPage() {
       }
     }
   };
-
+  
   const handleGoogleSignIn = () => {
     if (!auth) return;
-    // Set role to student for any new user signing up via Google on the login page.
     sessionStorage.setItem('signupRole', 'student');
-    initiateGoogleSignIn(auth);
+    const provider = new GoogleAuthProvider();
+    signInWithRedirect(auth, provider).catch((error) => {
+      console.error('Error initiating Google sign-in redirect:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Google Sign-In Failed',
+        description: 'Could not start the Google sign-in process. Please try again.',
+      });
+    });
   };
 
   // Show loading skeleton while checking auth state or creating profile

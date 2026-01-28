@@ -18,8 +18,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useAuth } from '@/firebase';
-import { initiateGoogleSignIn } from '@/firebase/non-blocking-login';
+import { useAuth, useFirestore } from '@/firebase';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ChromeIcon } from 'lucide-react';
 import Link from 'next/link';
@@ -29,7 +28,8 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUserRole } from '@/hooks/use-user-role';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithRedirect, updateProfile } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z
@@ -50,6 +50,7 @@ type FormSchema = z.infer<typeof formSchema>;
 
 export default function SignupPage() {
   const auth = useAuth();
+  const firestore = useFirestore();
   const { user, role, isLoading } = useUserRole();
   const router = useRouter();
   const { toast } = useToast();
@@ -73,11 +74,35 @@ export default function SignupPage() {
   const { isSubmitting, isValid } = form.formState;
 
   const onSubmit = async (data: FormSchema) => {
-    if (!auth) return;
+    if (!auth || !firestore) return;
     try {
-      sessionStorage.setItem('signupRole', 'student');
-      sessionStorage.setItem('signupName', data.name);
-      await createUserWithEmailAndPassword(auth, data.email, data.password);
+      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      const firebaseUser = userCredential.user;
+
+      // Update the user's profile with their name
+      await updateProfile(firebaseUser, { displayName: data.name });
+
+      // Create user document in 'users' collection
+      const userDocRef = doc(firestore, 'users', firebaseUser.uid);
+      await setDoc(userDocRef, {
+        id: firebaseUser.uid,
+        email: firebaseUser.email,
+        role: 'student',
+      });
+
+      // Create student document in 'students' subcollection
+      const studentDocRef = doc(firestore, 'users', firebaseUser.uid, 'students', firebaseUser.uid);
+      await setDoc(studentDocRef, {
+        id: firebaseUser.uid,
+        userId: firebaseUser.uid,
+        name: data.name,
+        email: firebaseUser.email,
+      });
+
+      toast({
+        title: 'Signup Successful',
+        description: "Your account has been created. Welcome!",
+      });
       // On successful signup, the useEffect will handle redirection.
     } catch (error: any) {
       if (error.code === 'auth/email-already-in-use') {
@@ -99,8 +124,15 @@ export default function SignupPage() {
   const handleGoogleSignIn = () => {
     if (!auth) return;
     sessionStorage.setItem('signupRole', 'student');
-    sessionStorage.removeItem('signupName'); // Name will be picked from Google profile
-    initiateGoogleSignIn(auth);
+    const provider = new GoogleAuthProvider();
+    signInWithRedirect(auth, provider).catch((error) => {
+      console.error('Error initiating Google sign-in redirect:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Google Sign-In Failed',
+        description: 'Could not start the Google sign-in process. Please try again.',
+      });
+    });
   };
 
   if (isLoading || (user && !role)) {
@@ -209,7 +241,7 @@ export default function SignupPage() {
                 className="w-full"
                 disabled={isSubmitting || !isValid}
               >
-                Create account
+                {isSubmitting ? 'Creating Account...' : 'Create account'}
               </Button>
             </form>
           </Form>

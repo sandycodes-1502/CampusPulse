@@ -78,15 +78,21 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     userError: null,
   });
 
-  // This effect will run once on mount and handle the redirect result.
+  // This effect will run once on mount and handle the redirect result from Google Sign-In.
   useEffect(() => {
     if (!auth || !firestore) return;
 
     const handleRedirect = async () => {
+      // Set loading state to true while processing redirect
+      setUserAuthState((s) => ({ ...s, isUserLoading: true }));
       try {
         const result = await getRedirectResult(auth);
         if (result) {
           // This is the signed-in user from the redirect
+          toast({
+            title: 'Signed in with Google',
+            description: 'Welcome!',
+          });
           const firebaseUser = result.user;
           const userDocRef = doc(firestore, 'users', firebaseUser.uid);
           const userDocSnap = await getDoc(userDocRef);
@@ -116,43 +122,11 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
                 name: name,
                 email: firebaseUser.email,
               });
-            } else if (role === 'security') {
-              const securityDocRef = doc(
-                firestore,
-                'roles_security',
-                firebaseUser.uid
-              );
-              await setDoc(securityDocRef, {
-                id: firebaseUser.uid,
-                userId: firebaseUser.uid,
-                name: name,
-                email: firebaseUser.email,
-                employeeId: `EMP-${Math.random()
-                  .toString(36)
-                  .substring(2, 8)
-                  .toUpperCase()}`,
-              });
-            } else if (role === 'admin') {
-              const adminDocRef = doc(
-                firestore,
-                'roles_admin',
-                firebaseUser.uid
-              );
-              await setDoc(adminDocRef, {
-                id: firebaseUser.uid,
-                userId: firebaseUser.uid,
-                name: name,
-                email: firebaseUser.email,
-                employeeId: `ADM-${Math.random()
-                  .toString(36)
-                  .substring(2, 8)
-                  .toUpperCase()}`,
-              });
             }
+            // Clear the temporary role from session storage
             sessionStorage.removeItem('signupRole');
-            sessionStorage.removeItem('signupName');
           }
-          // After profile creation, the onAuthStateChanged listener below
+          // After profile creation/check, the onAuthStateChanged listener below
           // will handle setting the user state and triggering redirects.
         }
       } catch (error: any) {
@@ -161,125 +135,35 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
           title: 'Google Sign-In Failed',
           description: error.message,
         });
-        setUserAuthState((s) => ({ ...s, isUserLoading: false, userError: error }));
+        setUserAuthState((s) => ({ ...s, userError: error }));
+      } finally {
+        // Always set loading to false after processing is done
+        setUserAuthState((s) => ({ ...s, isUserLoading: false }));
       }
     };
 
-    // We only want to process the redirect result when the app first loads.
-    // The existing onAuthStateChanged will handle subsequent user state.
     handleRedirect();
   }, [auth, firestore]);
 
   // Effect to subscribe to Firebase auth state changes
   useEffect(() => {
-    if (!auth || !firestore) {
-      // If no Auth service instance, cannot determine user state
-      setUserAuthState({
-        user: null,
-        isUserLoading: false,
-        userError: new Error('Auth or Firestore service not provided.'),
-      });
+    if (!auth) {
+      setUserAuthState({ user: null, isUserLoading: false, userError: new Error('Auth service not provided.') });
       return;
     }
 
-    setUserAuthState({ user: null, isUserLoading: true, userError: null }); // Reset on auth instance change
-
     const unsubscribe = onAuthStateChanged(
       auth,
-      async (firebaseUser) => {
-        if (firebaseUser) {
-          const userDocRef = doc(firestore, 'users', firebaseUser.uid);
-          try {
-            const userDocSnap = await getDoc(userDocRef);
-
-            // Only handle profile creation for NEW email/password users here.
-            // Google Sign-in profile creation is handled on the login/signup pages
-            // via getRedirectResult to avoid race conditions.
-            const isPasswordProvider = firebaseUser.providerData.some(
-              (p) => p.providerId === 'password'
-            );
-
-            if (!userDocSnap.exists() && isPasswordProvider) {
-              const role = sessionStorage.getItem('signupRole') || 'student';
-              const name =
-                sessionStorage.getItem('signupName') ||
-                firebaseUser.displayName ||
-                'New User';
-
-              await setDoc(userDocRef, {
-                id: firebaseUser.uid,
-                email: firebaseUser.email,
-                role: role,
-              });
-
-              if (role === 'student') {
-                const studentDocRef = doc(
-                  firestore,
-                  'users',
-                  firebaseUser.uid,
-                  'students',
-                  firebaseUser.uid
-                );
-                await setDoc(studentDocRef, {
-                  id: firebaseUser.uid,
-                  userId: firebaseUser.uid,
-                  name: name,
-                  email: firebaseUser.email,
-                });
-              } else if (role === 'security') {
-                const securityDocRef = doc(
-                  firestore,
-                  'roles_security',
-                  firebaseUser.uid
-                );
-                await setDoc(securityDocRef, {
-                  id: firebaseUser.uid,
-                  userId: firebaseUser.uid,
-                  name: name,
-                  email: firebaseUser.email,
-                  employeeId: `EMP-${Math.random()
-                    .toString(36)
-                    .substring(2, 8)
-                    .toUpperCase()}`,
-                });
-              }
-              // Admin role creation via email signup is not a standard flow, so not handled here.
-
-              sessionStorage.removeItem('signupRole');
-              sessionStorage.removeItem('signupName');
-            }
-
-            // Set user state after potential profile creation
-            setUserAuthState({
-              user: firebaseUser,
-              isUserLoading: false,
-              userError: null,
-            });
-          } catch (error) {
-            console.error('Error in onAuthStateChanged profile check:', error);
-            setUserAuthState({
-              user: null,
-              isUserLoading: false,
-              userError: error as Error,
-            });
-          }
-        } else {
-          // No user, clear state
-          setUserAuthState({
-            user: null,
-            isUserLoading: false,
-            userError: null,
-          });
-        }
+      (firebaseUser) => {
+        setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
       },
       (error) => {
-        // Auth listener error
         console.error('FirebaseProvider: onAuthStateChanged error:', error);
         setUserAuthState({ user: null, isUserLoading: false, userError: error });
       }
     );
     return () => unsubscribe(); // Cleanup
-  }, [auth, firestore]); // Depends on the auth instance
+  }, [auth]); // Depends on the auth instance
 
   // Memoize the context value
   const contextValue = useMemo((): FirebaseContextState => {
