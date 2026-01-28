@@ -1,14 +1,4 @@
-<<<<<<< HEAD
-import Link from "next/link";
-import {
-  ArrowRight,
-  ShieldCheck,
-  User,
-  UserCog,
-} from "lucide-react";
-=======
 'use client';
->>>>>>> 1bce9a085911f85826f019179c767ebab116ce61
 
 import Link from 'next/link';
 import Image from 'next/image';
@@ -53,14 +43,9 @@ export default function Home() {
       <header className="container mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
         <AppLogo />
         <Button asChild>
-<<<<<<< HEAD
-          <Link href="/dashboard">
-            Go to App <ArrowRight className="ml-2 h-4 w-4" />
-=======
           <Link href="/login">
             Login
             <ArrowRight className="ml-2 h-4 w-4" />
->>>>>>> 1bce9a085911f85826f019179c767ebab116ce61
           </Link>
         </Button>
       </header>
@@ -124,14 +109,6 @@ export default function Home() {
                     Request outpasses, check fee status, submit feedback, and
                     raise complaints with ease.
                   </p>
-<<<<<<< HEAD
-                  <Button variant="outline" className="mt-6" asChild>
-                    <Link href="/dashboard">
-                      Enter Portal <ArrowRight className="ml-2 h-4 w-4" />
-                    </Link>
-                  </Button>
-=======
->>>>>>> 1bce9a085911f85826f019179c767ebab116ce61
                 </CardContent>
               </Card>
 
@@ -149,14 +126,6 @@ export default function Home() {
                     Verify outpasses in real-time and maintain accurate student
                     entry/exit logs.
                   </p>
-<<<<<<< HEAD
-                  <Button variant="outline" className="mt-6" asChild>
-                    <Link href="/dashboard">
-                      Access Desk <ArrowRight className="ml-2 h-4 w-4" />
-                    </Link>
-                  </Button>
-=======
->>>>>>> 1bce9a085911f85826f019179c767ebab116ce61
                 </CardContent>
               </Card>
 
@@ -174,14 +143,6 @@ export default function Home() {
                     Manage all campus operations, view analytics, and post
                     announcements.
                   </p>
-<<<<<<< HEAD
-                  <Button variant="outline" className="mt-6" asChild>
-                    <Link href="/dashboard">
-                      Open Dashboard <ArrowRight className="ml-2 h-4 w-4" />
-                    </Link>
-                  </Button>
-=======
->>>>>>> 1bce9a085911f85826f019179c767ebab116ce61
                 </CardContent>
               </Card>
             </div>
