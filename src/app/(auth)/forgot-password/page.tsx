@@ -27,6 +27,8 @@ import { useUserRole } from '@/hooks/use-user-role';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/firebase';
+import { sendPasswordResetEmail } from 'firebase/auth';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
@@ -35,6 +37,7 @@ const formSchema = z.object({
 type FormSchema = z.infer<typeof formSchema>;
 
 export default function ForgotPasswordPage() {
+  const auth = useAuth();
   const { user, role, isLoading } = useUserRole();
   const router = useRouter();
 
@@ -53,12 +56,22 @@ export default function ForgotPasswordPage() {
 
   const { isSubmitting, isValid } = form.formState;
 
-  const onSubmit = (data: FormSchema) => {
-    console.log(data);
-    toast({
-      title: 'Password reset email sent',
-      description: `We've sent a password reset email to ${data.email}. Please check your inbox.`,
-    });
+  const onSubmit = async (data: FormSchema) => {
+    if (!auth) return;
+    try {
+      await sendPasswordResetEmail(auth, data.email);
+      toast({
+        title: 'Password reset email sent',
+        description: `We've sent a password reset email to ${data.email}. Please check your inbox.`,
+      });
+      form.reset();
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'An error occurred',
+        description: 'Could not send password reset email. Please try again.',
+      });
+    }
   };
 
   if (isLoading || user) {
@@ -113,7 +126,7 @@ export default function ForgotPasswordPage() {
                 className="w-full"
                 disabled={isSubmitting || !isValid}
               >
-                Send reset link
+                {isSubmitting ? 'Sending...' : 'Send reset link'}
               </Button>
             </form>
           </Form>

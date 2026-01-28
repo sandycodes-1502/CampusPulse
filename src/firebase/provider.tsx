@@ -10,10 +10,9 @@ import React, {
   useEffect,
 } from 'react';
 import { FirebaseApp } from 'firebase/app';
-import { Firestore, doc, getDoc, setDoc } from 'firebase/firestore';
-import { Auth, User, onAuthStateChanged, getRedirectResult } from 'firebase/auth';
+import { Firestore } from 'firebase/firestore';
+import { Auth, User, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
-import { toast } from '@/hooks/use-toast';
 
 interface FirebaseProviderProps {
   children: ReactNode;
@@ -53,7 +52,6 @@ export interface FirebaseServicesAndUser {
 
 // Return type for useUser() - specific to user auth state
 export interface UserHookResult {
-  // Renamed from UserAuthHookResult for consistency if desired, or keep as UserAuthHookResult
   user: User | null;
   isUserLoading: boolean;
   userError: Error | null;
@@ -77,73 +75,6 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     isUserLoading: true, // Start loading until first auth event
     userError: null,
   });
-
-  // This effect will run once on mount and handle the redirect result from Google Sign-In.
-  useEffect(() => {
-    if (!auth || !firestore) return;
-
-    const handleRedirect = async () => {
-      // Set loading state to true while processing redirect
-      setUserAuthState((s) => ({ ...s, isUserLoading: true }));
-      try {
-        const result = await getRedirectResult(auth);
-        if (result) {
-          // This is the signed-in user from the redirect
-          toast({
-            title: 'Signed in with Google',
-            description: 'Welcome!',
-          });
-          const firebaseUser = result.user;
-          const userDocRef = doc(firestore, 'users', firebaseUser.uid);
-          const userDocSnap = await getDoc(userDocRef);
-
-          if (!userDocSnap.exists()) {
-            // New user via Google, create their profile documents
-            const role = sessionStorage.getItem('signupRole') || 'student';
-            const name = firebaseUser.displayName || 'New User';
-
-            await setDoc(userDocRef, {
-              id: firebaseUser.uid,
-              email: firebaseUser.email,
-              role: role,
-            });
-
-            if (role === 'student') {
-              const studentDocRef = doc(
-                firestore,
-                'users',
-                firebaseUser.uid,
-                'students',
-                firebaseUser.uid
-              );
-              await setDoc(studentDocRef, {
-                id: firebaseUser.uid,
-                userId: firebaseUser.uid,
-                name: name,
-                email: firebaseUser.email,
-              });
-            }
-            // Clear the temporary role from session storage
-            sessionStorage.removeItem('signupRole');
-          }
-          // After profile creation/check, the onAuthStateChanged listener below
-          // will handle setting the user state and triggering redirects.
-        }
-      } catch (error: any) {
-        toast({
-          variant: 'destructive',
-          title: 'Google Sign-In Failed',
-          description: error.message,
-        });
-        setUserAuthState((s) => ({ ...s, userError: error }));
-      } finally {
-        // Always set loading to false after processing is done
-        setUserAuthState((s) => ({ ...s, isUserLoading: false }));
-      }
-    };
-
-    handleRedirect();
-  }, [auth, firestore]);
 
   // Effect to subscribe to Firebase auth state changes
   useEffect(() => {
@@ -257,7 +188,6 @@ export function useMemoFirebase<T>(
  * @returns {UserHookResult} Object with user, isUserLoading, userError.
  */
 export const useUser = (): UserHookResult => {
-  // Renamed from useAuthUser
   const { user, isUserLoading, userError } = useFirebase(); // Leverages the main hook
   return { user, isUserLoading, userError };
 };

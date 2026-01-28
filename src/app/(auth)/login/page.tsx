@@ -20,14 +20,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/firebase';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ChromeIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithRedirect } from 'firebase/auth';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/use-user-role';
 
@@ -86,27 +85,14 @@ export default function LoginPage() {
         toast({
           variant: 'destructive',
           title: 'An error occurred',
-          description: error.message,
+          description: 'There was an issue with your login attempt.',
         });
+        console.error('Login Error:', error);
       }
     }
   };
-  
-  const handleGoogleSignIn = () => {
-    if (!auth) return;
-    sessionStorage.setItem('signupRole', 'student');
-    const provider = new GoogleAuthProvider();
-    signInWithRedirect(auth, provider).catch((error) => {
-      console.error('Error initiating Google sign-in redirect:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Google Sign-In Failed',
-        description: 'Could not start the Google sign-in process. Please try again.',
-      });
-    });
-  };
 
-  // Show loading skeleton while checking auth state or creating profile
+  // Show loading skeleton while checking auth state
   if (isLoading || (user && !role)) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
@@ -190,30 +176,10 @@ export default function LoginPage() {
                 className="w-full"
                 disabled={isSubmitting || !isValid}
               >
-                Sign in
+                {isSubmitting ? 'Signing in...' : 'Sign in'}
               </Button>
             </form>
           </Form>
-
-          <div className="relative my-4">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
-                Or continue with
-              </span>
-            </div>
-          </div>
-
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={handleGoogleSignIn}
-          >
-            <ChromeIcon className="mr-2" />
-            Sign in with Google
-          </Button>
 
           <div className="mt-4 text-center text-sm">
             Don&apos;t have an account?{' '}

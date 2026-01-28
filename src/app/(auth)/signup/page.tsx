@@ -20,7 +20,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { useAuth, useFirestore } from '@/firebase';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ChromeIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -28,7 +27,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUserRole } from '@/hooks/use-user-role';
-import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithRedirect, updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
@@ -76,21 +75,22 @@ export default function SignupPage() {
   const onSubmit = async (data: FormSchema) => {
     if (!auth || !firestore) return;
     try {
+      // 1. Create user in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       const firebaseUser = userCredential.user;
 
-      // Update the user's profile with their name
+      // 2. Update the user's profile with their name
       await updateProfile(firebaseUser, { displayName: data.name });
 
-      // Create user document in 'users' collection
+      // 3. Create user document in 'users' collection
       const userDocRef = doc(firestore, 'users', firebaseUser.uid);
       await setDoc(userDocRef, {
         id: firebaseUser.uid,
         email: firebaseUser.email,
-        role: 'student',
+        role: 'student', // Default role
       });
 
-      // Create student document in 'students' subcollection
+      // 4. Create student document in 'students' subcollection
       const studentDocRef = doc(firestore, 'users', firebaseUser.uid, 'students', firebaseUser.uid);
       await setDoc(studentDocRef, {
         id: firebaseUser.uid,
@@ -115,24 +115,11 @@ export default function SignupPage() {
         toast({
           variant: 'destructive',
           title: 'An error occurred',
-          description: error.message,
+          description: 'There was an issue creating your account.',
         });
+        console.error('Signup Error:', error);
       }
     }
-  };
-
-  const handleGoogleSignIn = () => {
-    if (!auth) return;
-    sessionStorage.setItem('signupRole', 'student');
-    const provider = new GoogleAuthProvider();
-    signInWithRedirect(auth, provider).catch((error) => {
-      console.error('Error initiating Google sign-in redirect:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Google Sign-In Failed',
-        description: 'Could not start the Google sign-in process. Please try again.',
-      });
-    });
   };
 
   if (isLoading || (user && !role)) {
@@ -162,7 +149,7 @@ export default function SignupPage() {
         <CardHeader>
           <CardTitle>Create an account</CardTitle>
           <CardDescription>
-            Enter your details to create a student account.
+            Enter your details to create a new student account.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -245,26 +232,6 @@ export default function SignupPage() {
               </Button>
             </form>
           </Form>
-
-          <div className="relative my-4">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
-                Or continue with
-              </span>
-            </div>
-          </div>
-
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={handleGoogleSignIn}
-          >
-            <ChromeIcon className="mr-2" />
-            Sign up with Google
-          </Button>
 
           <div className="mt-4 text-center text-sm">
             Already have an account?{' '}
