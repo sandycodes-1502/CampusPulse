@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { collectionGroup, query, orderBy } from 'firebase/firestore';
+import { collectionGroup, query, orderBy, limit } from 'firebase/firestore';
 
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { PageHeader } from '@/components/layout/page-header';
@@ -24,7 +24,7 @@ export default function FeesPage() {
   const feesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     // Default to admin view since auth is removed
-    return query(collectionGroup(firestore, 'hostel_fees'), orderBy('studentName'));
+    return query(collectionGroup(firestore, 'hostel_fees'), orderBy('studentName'), limit(50));
   }, [firestore]);
 
   const { data: fees, isLoading } = useCollection<Fee>(feesQuery);

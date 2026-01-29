@@ -5,6 +5,7 @@ import {
   orderBy,
   doc,
   collectionGroup,
+  limit,
 } from 'firebase/firestore';
 import { MoreHorizontal } from 'lucide-react';
 import { format } from 'date-fns';
@@ -49,7 +50,7 @@ export default function OutpassPage() {
     if (!firestore) return null;
     
     // Default to admin/security view since auth is removed
-    return query(collectionGroup(firestore, 'outpasses'), orderBy('departureDateTime', 'desc'));
+    return query(collectionGroup(firestore, 'outpasses'), orderBy('departureDateTime', 'desc'), limit(50));
     
   }, [firestore]);
 
