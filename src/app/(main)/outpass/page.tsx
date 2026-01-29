@@ -4,6 +4,7 @@
 import Link from 'next/link';
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import { format } from 'date-fns';
+import { getFirestore, doc, updateDoc } from 'firebase/firestore';
 
 import { PageHeader } from '@/components/layout/page-header';
 import {
@@ -34,14 +35,26 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useOutpassesStore } from '@/hooks/use-outpasses-store';
+import { getFirebase } from '@/firebase/client-provider';
 
 export default function OutpassPage() {
   const { toast } = useToast();
-  const { outpasses, updateOutpass, isLoading } = useOutpassesStore();
+  const { outpasses, isLoading } = useOutpassesStore();
 
-  const handleStatusChange = async (outpassId: string, status: 'approved' | 'rejected' | 'used') => {
-    await updateOutpass(outpassId, { status });
-    toast({ title: `Outpass has been ${status}.` });
+  const handleStatusChange = async (docId: string, status: 'approved' | 'rejected' | 'used') => {
+    try {
+      const { db } = getFirebase();
+      const outpassRef = doc(db, 'outpass-data', docId);
+      await updateDoc(outpassRef, { status });
+      toast({ title: `Outpass has been ${status}.` });
+    } catch (error) {
+      console.error('Failed to update outpass status:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Update failed',
+        description: 'Could not update the outpass status.',
+      });
+    }
   };
 
   const isActionable = true; // Default to admin/security view
@@ -98,20 +111,20 @@ export default function OutpassPage() {
                   </TableRow>
                 ) : (
                   outpasses?.map((outpass) => (
-                    <TableRow key={outpass.id}>
+                    <TableRow key={outpass.docId}>
                       <TableCell className="hidden md:table-cell">
-                        <div className="font-medium">{outpass.studentName}</div>
+                        <div className="font-medium">{outpass.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {outpass.roomNumber}
+                          ID: {outpass.id}
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="font-medium md:hidden">{outpass.studentName}</div>
+                        <div className="font-medium md:hidden">{outpass.name}</div>
                         <div className="text-sm text-muted-foreground">{outpass.reason}</div>
                       </TableCell>
                       <TableCell className="hidden sm:table-cell">
-                        {format(new Date(outpass.fromDate), 'dd MMM, p')} -{' '}
-                        {format(new Date(outpass.toDate), 'dd MMM, p')}
+                        {format(outpass.duration.startdate.toDate(), 'dd MMM, p')} -{' '}
+                        {format(outpass.duration.enddate.toDate(), 'dd MMM, p')}
                       </TableCell>
                       <TableCell className="hidden sm:table-cell text-center">
                         <Badge
@@ -137,8 +150,8 @@ export default function OutpassPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem onClick={() => handleStatusChange(outpass.id, 'approved')}>Approve</DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleStatusChange(outpass.id, 'rejected')}>Reject</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleStatusChange(outpass.docId, 'approved')}>Approve</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleStatusChange(outpass.docId, 'rejected')}>Reject</DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>

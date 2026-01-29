@@ -1,5 +1,5 @@
-import type { Student, Room, Announcement, Complaint, Feedback, Fee, EntryExitLog, Outpass } from './types';
-import { subDays, formatISO, addDays } from 'date-fns';
+import type { Student, Room, Announcement, Complaint, Feedback, Fee, EntryExitLog } from './types';
+import { subDays, formatISO } from 'date-fns';
 
 export const students: Student[] = [
     { id: 'student01', userId: 'user01', name: 'Alice Johnson', email: 'alice@example.com', hostelRoomId: 'room01', major: 'Computer Science' },
@@ -36,13 +36,6 @@ export const initialComplaints: Complaint[] = [
 export const initialFeedback: Feedback[] = [
     { id: 'fb01', studentId: 'student02', studentName: 'Bob Williams', feedbackText: 'The quality of food in the mess has improved a lot. Keep it up!', submissionDate: formatISO(subDays(new Date(), 4)), category: 'Hostel' },
     { id: 'fb02', studentId: 'student04', studentName: 'Diana Miller', feedbackText: 'We need more books related to Civil Engineering in the library.', submissionDate: formatISO(subDays(new Date(), 10)), category: 'College' },
-];
-
-export const initialOutpasses: Outpass[] = [
-    { id: 'outpass01', studentId: 'student01', studentName: 'Alice Johnson', roomNumber: 'A-101', reason: 'Weekend trip home', fromDate: formatISO(subDays(new Date(), 2)), toDate: formatISO(new Date()), status: 'approved' },
-    { id: 'outpass02', studentId: 'student02', studentName: 'Bob Williams', roomNumber: 'A-101', reason: 'Medical appointment', fromDate: formatISO(new Date()), toDate: formatISO(addDays(new Date(), 1)), status: 'pending' },
-    { id: 'outpass03', studentId: 'student03', studentName: 'Charlie Brown', roomNumber: 'A-102', reason: 'Family function', fromDate: formatISO(subDays(new Date(), 5)), toDate: formatISO(subDays(new Date(), 3)), status: 'used' },
-    { id: 'outpass04', studentId: 'student04', studentName: 'Diana Miller', roomNumber: 'B-205', reason: 'Attending a workshop', fromDate: formatISO(subDays(new Date(), 1)), toDate: formatISO(addDays(new Date(), 1)), status: 'rejected' },
 ];
 
 export const fees: Fee[] = [

@@ -38,7 +38,6 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { Complaint } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import {
   students,
@@ -146,7 +145,7 @@ export default function AdminDashboardPage() {
               <Ticket className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              {isLoading ? (
+              {isLoadingOutpasses ? (
                 <Skeleton className="h-8 w-12" />
               ) : (
                 <div className="text-2xl font-bold">

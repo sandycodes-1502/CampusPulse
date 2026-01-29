@@ -1,55 +1,23 @@
 
-"use client";
+'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useCollection } from 'react-firebase-hooks/firestore';
+import { collection, getFirestore, query, orderBy } from 'firebase/firestore';
 import type { Outpass } from '@/lib/types';
-import { initialOutpasses } from '@/lib/data';
-
-const STORAGE_KEY = 'campus-pulse-outpasses';
+import { getFirebase } from '@/firebase/client-provider';
 
 export function useOutpassesStore() {
-  const [outpasses, setOutpasses] = useState<Outpass[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { db } = getFirebase();
+  const outpassesRef = collection(db, 'outpass-data');
+  const q = query(outpassesRef, orderBy('id', 'desc'));
 
-  useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        setOutpasses(JSON.parse(stored));
-      } else {
-        setOutpasses(initialOutpasses);
-      }
-    } catch (error) {
-      console.error('Failed to read outpasses from localStorage', error);
-      setOutpasses(initialOutpasses);
-    }
-    setIsLoading(false);
-  }, []);
+  const [value, isLoading, error] = useCollection(q);
 
-  useEffect(() => {
-    if (!isLoading) {
-      try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(outpasses));
-      } catch (error) {
-        console.error('Failed to write outpasses to localStorage', error);
-      }
-    }
-  }, [outpasses, isLoading]);
-  
-  const addOutpass = useCallback((newOutpass: Omit<Outpass, 'id' | 'status'>) => {
-    setOutpasses(prev => [
-      { 
-        ...newOutpass,
-        id: `outpass-${Date.now()}`,
-        status: 'pending',
-      },
-      ...prev,
-    ]);
-  }, []);
+  const outpasses: Outpass[] =
+    value?.docs.map((doc) => ({
+      docId: doc.id,
+      ...(doc.data() as Omit<Outpass, 'docId'>),
+    })) || [];
 
-  const updateOutpass = useCallback((id: string, updatedData: Partial<Omit<Outpass, 'id'>>) => {
-    setOutpasses(prev => prev.map(op => op.id === id ? { ...op, ...updatedData } : op));
-  }, []);
-
-  return { outpasses, addOutpass, updateOutpass, isLoading, error: null };
+  return { outpasses, isLoading, error };
 }

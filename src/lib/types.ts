@@ -1,3 +1,4 @@
+import type { Timestamp } from 'firebase/firestore';
 
 export type Announcement = {
   id: string;
@@ -28,15 +29,15 @@ export type Feedback = {
 };
 
 export type Outpass = {
-  id: string;
-  studentId: string;
-  studentName: string;
-  roomNumber: string;
+  docId: string; // The actual Firestore document ID
+  id: string; // Your custom 4-digit string ID
+  name: string;
   reason: string;
-  fromDate: string;
-  toDate: string;
+  duration: {
+    startdate: Timestamp;
+    enddate: Timestamp;
+  };
   status: 'pending' | 'approved' | 'rejected' | 'used';
-  approvedBySecurityId?: string;
 };
 
 export type Fee = {

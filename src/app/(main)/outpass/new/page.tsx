@@ -8,6 +8,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon } from 'lucide-react';
+import { useState } from 'react';
+import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs, Timestamp } from 'firebase/firestore';
+
 
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -35,58 +38,70 @@ import {
 } from '@/components/ui/card';
 import { PageHeader } from '@/components/layout/page-header';
 import { cn } from '@/lib/utils';
-import { students } from '@/lib/data';
-import { useOutpassesStore } from '@/hooks/use-outpasses-store';
+import { getFirebase } from '@/firebase/client-provider';
+
 
 const outpassFormSchema = z.object({
+  name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   reason: z.string().min(5, { message: 'Reason must be at least 5 characters.' }),
-  fromDate: z.date({ required_error: 'Departure date is required.' }),
-  toDate: z.date({ required_error: 'Return date is required.' }),
-}).refine((data) => data.toDate > data.fromDate, {
+  startdate: z.date({ required_error: 'Departure date is required.' }),
+  enddate: z.date({ required_error: 'Return date is required.' }),
+}).refine((data) => data.enddate > data.startdate, {
   message: "Return date must be after departure date.",
-  path: ["toDate"],
+  path: ["enddate"],
 });
 
 type OutpassFormValues = z.infer<typeof outpassFormSchema>;
 
-const mockStudent = students[0]; // Using the first student for demo purposes
-
 export default function NewOutpassPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { addOutpass } = useOutpassesStore();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<OutpassFormValues>({
     resolver: zodResolver(outpassFormSchema),
     defaultValues: {
+      name: '',
       reason: '',
     }
   });
 
-  function onSubmit(data: OutpassFormValues) {
+  async function onSubmit(data: OutpassFormValues) {
+    setIsSubmitting(true);
     try {
-      addOutpass({
-        studentId: mockStudent.id,
-        studentName: mockStudent.name,
-        roomNumber: 'A-101', // Mock room number from previous implementation
-        reason: data.reason,
-        fromDate: data.fromDate.toISOString(),
-        toDate: data.toDate.toISOString(),
+      const { db } = getFirebase();
+      const outpassesRef = collection(db, 'outpass-data');
+      
+      // Generate new unique ID
+      const q = query(outpassesRef, orderBy('id', 'desc'), limit(1));
+      const querySnapshot = await getDocs(q);
+      const newId = querySnapshot.empty ? '1111' : (parseInt(querySnapshot.docs[0].data().id, 10) + 1).toString();
+
+      await addDoc(outpassesRef, {
+          id: newId,
+          name: data.name,
+          reason: data.reason,
+          duration: {
+              startdate: Timestamp.fromDate(data.startdate),
+              enddate: Timestamp.fromDate(data.enddate),
+          },
+          status: 'pending',
       });
 
       toast({
-        title: 'Outpass Request Submitted',
-        description: 'Your request is now pending approval.',
+          title: 'Outpass Request Submitted',
+          description: 'Your request is now pending approval.',
       });
       router.push('/student-dashboard');
     } catch (error) {
-      console.error("Failed to submit outpass request:", error);
-      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-      toast({
-        variant: 'destructive',
-        title: 'Submission Failed',
-        description: `There was a problem submitting your request: ${errorMessage}`,
-      });
+        console.error("Failed to submit outpass:", error);
+        toast({
+            variant: 'destructive',
+            title: 'Submission Failed',
+            description: 'There was a problem with your request.',
+        });
+    } finally {
+        setIsSubmitting(false);
     }
   }
 
@@ -106,6 +121,19 @@ export default function NewOutpassPage() {
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                 <FormField
                   control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Full Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="E.g., John Doe" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
                   name="reason"
                   render={({ field }) => (
                     <FormItem>
@@ -120,7 +148,7 @@ export default function NewOutpassPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
-                    name="fromDate"
+                    name="startdate"
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormLabel>From Date</FormLabel>
@@ -161,7 +189,7 @@ export default function NewOutpassPage() {
                   />
                   <FormField
                     control={form.control}
-                    name="toDate"
+                    name="enddate"
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormLabel>To Date</FormLabel>
@@ -190,7 +218,7 @@ export default function NewOutpassPage() {
                               selected={field.value}
                               onSelect={field.onChange}
                               disabled={(date) =>
-                                date < (form.getValues("fromDate") || new Date())
+                                date < (form.getValues("startdate") || new Date())
                               }
                               initialFocus
                             />
@@ -203,10 +231,10 @@ export default function NewOutpassPage() {
                 </div>
                 <div className="flex justify-end items-center gap-2">
                   <Button variant="ghost" asChild>
-                    <Link href="/outpass">Cancel</Link>
+                    <Link href="/student-dashboard">Cancel</Link>
                   </Button>
-                  <Button type="submit" disabled={form.formState.isSubmitting}>
-                    {form.formState.isSubmitting
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting
                       ? 'Submitting...'
                       : 'Submit Request'}
                   </Button>
