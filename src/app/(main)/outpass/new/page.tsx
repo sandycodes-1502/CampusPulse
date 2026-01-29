@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon } from 'lucide-react';
+import { collection, addDoc } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -26,7 +27,6 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
-import { useOutpassesStore } from '@/hooks/use-outpasses-store';
 import {
   Card,
   CardContent,
@@ -37,6 +37,7 @@ import {
 import { PageHeader } from '@/components/layout/page-header';
 import { cn } from '@/lib/utils';
 import { students } from '@/lib/data';
+import { useFirebase } from '@/firebase/provider';
 
 const outpassFormSchema = z.object({
   reason: z.string().min(5, { message: 'Reason must be at least 5 characters.' }),
@@ -53,9 +54,9 @@ type OutpassFormValues = z.infer<typeof outpassFormSchema>;
 const mockStudent = students[0]; // Using the first student for demo purposes
 
 export default function NewOutpassPage() {
+  const { db } = useFirebase();
   const router = useRouter();
   const { toast } = useToast();
-  const { addOutpass } = useOutpassesStore();
 
   const form = useForm<OutpassFormValues>({
     resolver: zodResolver(outpassFormSchema),
@@ -67,7 +68,8 @@ export default function NewOutpassPage() {
 
   async function onSubmit(data: OutpassFormValues) {
     try {
-      await addOutpass({
+      const outpassesCollection = collection(db, 'outpasses');
+      await addDoc(outpassesCollection, {
         studentId: mockStudent.id,
         studentName: mockStudent.name,
         roomNumber: 'A-101', // Mock room number
@@ -76,19 +78,21 @@ export default function NewOutpassPage() {
         departureDateTime: data.departureDateTime.toISOString(),
         returnDateTime: data.returnDateTime.toISOString(),
         status: 'pending',
+        createdAt: new Date().toISOString(),
       });
 
       toast({
         title: 'Outpass Request Submitted',
-        description: 'Your request is now pending approval and stored in the database.',
+        description: 'Your request is now pending approval.',
       });
-      router.push('/outpass');
+      router.push('/student-dashboard');
     } catch (error) {
       console.error("Failed to submit outpass request:", error);
+      const errorMessage = error instanceof Error ? error.message : 'Please try again.';
       toast({
         variant: 'destructive',
         title: 'Submission Failed',
-        description: 'There was a problem submitting your request. Please try again.',
+        description: `There was a problem submitting your request. ${errorMessage}`,
       });
     }
   }
