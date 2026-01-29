@@ -28,6 +28,9 @@ export const initialComplaints: Complaint[] = [
     { id: 'comp01', studentId: 'student01', studentName: 'Alice Johnson', roomNumber: 'A-101', complaintText: 'The Wi-Fi in my room is very slow and disconnects frequently.', submissionDate: formatISO(subDays(new Date(), 3)), status: 'in progress' },
     { id: 'comp02', studentId: 'student03', studentName: 'Charlie Brown', roomNumber: 'A-102', complaintText: 'Water leakage in the bathroom ceiling.', submissionDate: formatISO(subDays(new Date(), 1)), status: 'open' },
     { id: 'comp03', studentId: 'student05', studentName: 'Ethan Davis', roomNumber: 'B-205', complaintText: 'The study lamp in my room is not working.', submissionDate: formatISO(subDays(new Date(), 7)), status: 'resolved' },
+    { id: 'comp04', studentId: 'student02', studentName: 'Bob Williams', roomNumber: 'A-101', complaintText: 'Noise disturbance from the adjacent room late at night.', submissionDate: formatISO(subDays(new Date(), 2)), status: 'open' },
+    { id: 'comp05', studentId: 'student04', studentName: 'Diana Miller', roomNumber: 'B-205', complaintText: 'A chair in the common area is broken.', submissionDate: formatISO(subDays(new Date(), 4)), status: 'in progress' },
+    { id: 'comp06', studentId: 'student06', studentName: 'Fiona Garcia', roomNumber: 'B-206', complaintText: 'I have lost my room key and need a replacement.', submissionDate: formatISO(subDays(new Date(), 1)), status: 'open' },
 ];
 
 export const initialFeedback: Feedback[] = [
