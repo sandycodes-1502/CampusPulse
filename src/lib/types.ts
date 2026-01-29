@@ -1,3 +1,4 @@
+
 export type Announcement = {
   id: string;
   title: string;
@@ -32,12 +33,11 @@ export type Outpass = {
   studentName: string;
   roomNumber: string;
   reason: string;
-  destination: string; // Added this field
-  departureDateTime: string;
-  returnDateTime: string;
+  fromDate: string;
+  toDate: string;
   status: 'pending' | 'approved' | 'rejected' | 'used';
   approvedBySecurityId?: string;
-  createdAt?: string;
+  createdAt?: any; // Can be a server timestamp
 };
 
 export type Fee = {

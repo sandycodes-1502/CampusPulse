@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -37,7 +38,7 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { Complaint, Outpass } from '@/lib/types';
+import type { Complaint } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import {
   students,

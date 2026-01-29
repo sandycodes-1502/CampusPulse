@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -68,7 +69,7 @@ export default function OutpassPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[200px] hidden md:table-cell">Student</TableHead>
-                  <TableHead>Destination & Reason</TableHead>
+                  <TableHead>Reason</TableHead>
                   <TableHead className="hidden sm:table-cell">Dates</TableHead>
                   <TableHead className="hidden sm:table-cell text-center">Status</TableHead>
                   {isActionable && (
@@ -106,12 +107,11 @@ export default function OutpassPage() {
                       </TableCell>
                       <TableCell>
                         <div className="font-medium md:hidden">{outpass.studentName}</div>
-                        <div className="font-medium">{outpass.destination}</div>
                         <div className="text-sm text-muted-foreground">{outpass.reason}</div>
                       </TableCell>
                       <TableCell className="hidden sm:table-cell">
-                        {format(new Date(outpass.departureDateTime), 'dd MMM, p')} -{' '}
-                        {format(new Date(outpass.returnDateTime), 'dd MMM, p')}
+                        {format(new Date(outpass.fromDate), 'dd MMM, p')} -{' '}
+                        {format(new Date(outpass.toDate), 'dd MMM, p')}
                       </TableCell>
                       <TableCell className="hidden sm:table-cell text-center">
                         <Badge

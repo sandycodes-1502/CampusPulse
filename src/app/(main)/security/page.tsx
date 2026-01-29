@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   QrCode,
   Search,
@@ -51,7 +52,10 @@ function OutpassVerification() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationResult, setVerificationResult] = useState<OutpassVerificationResult | null>(null);
 
-  const approvedOutpasses = outpasses.filter((o) => o.status === 'approved');
+  const approvedOutpasses = useMemo(() => {
+    if (!outpasses) return [];
+    return outpasses.filter((o) => o.status === 'approved');
+  }, [outpasses]);
 
   const handleVerify = async () => {
     if (!outpassId) return;
@@ -133,11 +137,11 @@ function OutpassVerification() {
                       <div className="grid gap-1.5">
                         <p className="font-semibold text-lg">{verificationResult.studentName}</p>
                         <p className="text-sm text-muted-foreground">ID: {verificationResult.studentId} | Room: {verificationResult.roomNumber}</p>
-                        <p className="text-sm">Destination: {verificationResult.reason}</p>
+                        <p className="text-sm">Reason: {verificationResult.reason}</p>
                         <p className="text-sm flex items-center gap-1">
                           <Clock className="h-4 w-4 text-muted-foreground" />
                           <span>
-                            {format(new Date(verificationResult.departureDateTime), 'p, dd MMM')} - {format(new Date(verificationResult.returnDateTime), 'p, dd MMM')}
+                            {format(new Date(verificationResult.fromDate), 'p, dd MMM')} - {format(new Date(verificationResult.toDate), 'p, dd MMM')}
                           </span>
                         </p>
                         <Badge className="w-fit bg-green-100 text-green-800 hover:bg-green-200">Valid & Approved</Badge>
@@ -195,7 +199,7 @@ function OutpassVerification() {
                       <div className="font-medium">{outpass.studentName}</div>
                       <div className="text-sm text-muted-foreground">{outpass.studentId}</div>
                     </TableCell>
-                    <TableCell>{format(new Date(outpass.returnDateTime), 'p, dd MMM')}</TableCell>
+                    <TableCell>{format(new Date(outpass.toDate), 'p, dd MMM')}</TableCell>
                     <TableCell className='text-right'>
                       <Button variant="outline" size="sm" onClick={() => handleMarkAsUsed(outpass)}>Mark Used</Button>
                     </TableCell>
