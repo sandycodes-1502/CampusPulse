@@ -8,7 +8,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon } from 'lucide-react';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -37,7 +36,7 @@ import {
 import { PageHeader } from '@/components/layout/page-header';
 import { cn } from '@/lib/utils';
 import { students } from '@/lib/data';
-import { useFirebase } from '@/firebase/provider';
+import { useOutpassesStore } from '@/hooks/use-outpasses-store';
 
 const outpassFormSchema = z.object({
   reason: z.string().min(5, { message: 'Reason must be at least 5 characters.' }),
@@ -53,9 +52,9 @@ type OutpassFormValues = z.infer<typeof outpassFormSchema>;
 const mockStudent = students[0]; // Using the first student for demo purposes
 
 export default function NewOutpassPage() {
-  const { db } = useFirebase();
   const router = useRouter();
   const { toast } = useToast();
+  const { addOutpass } = useOutpassesStore();
 
   const form = useForm<OutpassFormValues>({
     resolver: zodResolver(outpassFormSchema),
@@ -64,30 +63,16 @@ export default function NewOutpassPage() {
     }
   });
 
-  async function onSubmit(data: OutpassFormValues) {
-    if (!db) {
-        toast({
-          variant: 'destructive',
-          title: 'Database not connected',
-          description: 'Please try again later.',
-        });
-        return;
-    }
-
+  function onSubmit(data: OutpassFormValues) {
     try {
-      const outpassesCollection = collection(db, 'outpasses');
-      const docRef = await addDoc(outpassesCollection, {
+      addOutpass({
         studentId: mockStudent.id,
         studentName: mockStudent.name,
         roomNumber: 'A-101', // Mock room number from previous implementation
         reason: data.reason,
         fromDate: data.fromDate.toISOString(),
         toDate: data.toDate.toISOString(),
-        status: 'pending',
-        createdAt: serverTimestamp(),
       });
-
-      console.log("Document written with ID: ", docRef.id);
 
       toast({
         title: 'Outpass Request Submitted',

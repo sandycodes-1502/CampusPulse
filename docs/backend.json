@@ -525,22 +525,6 @@
         }
       },
       {
-        "path": "/outpasses/{outpassId}",
-        "definition": {
-          "entityName": "Outpass",
-          "schema": {
-            "$ref": "#/backend/entities/Outpass"
-          },
-          "description": "Stores all student outpass requests in a single top-level collection for easy admin/security access.",
-          "params": [
-            {
-              "name": "outpassId",
-              "description": "The unique ID of the outpass request."
-            }
-          ]
-        }
-      },
-      {
         "path": "/entry_exit_logs/{entryExitLogId}",
         "definition": {
           "entityName": "EntryExitLog",

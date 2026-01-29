@@ -37,7 +37,6 @@ export type Outpass = {
   toDate: string;
   status: 'pending' | 'approved' | 'rejected' | 'used';
   approvedBySecurityId?: string;
-  createdAt?: any; // Can be a server timestamp
 };
 
 export type Fee = {
