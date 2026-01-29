@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -58,6 +59,10 @@ export default function NewOutpassPage() {
 
   const form = useForm<OutpassFormValues>({
     resolver: zodResolver(outpassFormSchema),
+    defaultValues: {
+      reason: '',
+      destination: '',
+    }
   });
 
   async function onSubmit(data: OutpassFormValues) {
