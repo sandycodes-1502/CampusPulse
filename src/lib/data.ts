@@ -1,4 +1,4 @@
-import type { Student, Room, Announcement, Complaint, Feedback, Outpass, Fee, EntryExitLog } from './types';
+import type { Student, Room, Announcement, Complaint, Feedback, Fee, EntryExitLog } from './types';
 import { subDays, formatISO } from 'date-fns';
 
 export const students: Student[] = [
@@ -33,13 +33,6 @@ export const initialComplaints: Complaint[] = [
 export const initialFeedback: Feedback[] = [
     { id: 'fb01', studentId: 'student02', studentName: 'Bob Williams', feedbackText: 'The quality of food in the mess has improved a lot. Keep it up!', submissionDate: formatISO(subDays(new Date(), 4)), category: 'Hostel' },
     { id: 'fb02', studentId: 'student04', studentName: 'Diana Miller', feedbackText: 'We need more books related to Civil Engineering in the library.', submissionDate: formatISO(subDays(new Date(), 10)), category: 'College' },
-];
-
-export const initialOutpasses: Outpass[] = [
-    { id: 'op01', studentId: 'student01', studentName: 'Alice Johnson', roomNumber: 'A-101', destination: 'Home', reason: 'Family function', departureDateTime: formatISO(subDays(new Date(), 2)), returnDateTime: formatISO(new Date()), status: 'approved' },
-    { id: 'op02', studentId: 'student02', studentName: 'Bob Williams', roomNumber: 'A-101', destination: 'Pune City', reason: 'Shopping', departureDateTime: formatISO(new Date()), returnDateTime: formatISO(new Date()), status: 'pending' },
-    { id: 'op03', studentId: 'student04', studentName: 'Diana Miller', roomNumber: 'B-205', destination: 'Mumbai', reason: 'Medical Appointment', departureDateTime: formatISO(subDays(new Date(), 5)), returnDateTime: formatISO(subDays(new Date(), 4)), status: 'used' },
-    { id: 'op04', studentId: 'student06', studentName: 'Fiona Garcia', roomNumber: 'B-206', destination: 'Local Market', reason: 'Personal work', departureDateTime: formatISO(subDays(new Date(), 1)), returnDateTime: formatISO(subDays(new Date(), 1)), status: 'rejected' },
 ];
 
 export const fees: Fee[] = [

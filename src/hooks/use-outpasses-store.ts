@@ -1,53 +1,26 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useCollection } from '@/firebase/firestore/use-collection';
 import type { Outpass } from '@/lib/types';
-import { initialOutpasses } from '@/lib/data';
-
-const STORAGE_KEY = 'campus-pulse-outpasses';
+import { useFirebase } from '@/firebase/provider';
+import { collection, addDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 export function useOutpassesStore() {
-  const [outpasses, setOutpasses] = useState<Outpass[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { db } = useFirebase();
+  const { data: outpasses, loading: isLoading, error } = useCollection<Outpass>('outpasses');
 
-  useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        setOutpasses(JSON.parse(stored));
-      } else {
-        setOutpasses(initialOutpasses);
-      }
-    } catch (error) {
-      console.error('Failed to read outpasses from localStorage', error);
-      setOutpasses(initialOutpasses);
-    }
-    setIsLoading(false);
-  }, []);
+  const addOutpass = async (newOutpass: Omit<Outpass, 'id' | 'createdAt'>) => {
+    const outpassesCollection = collection(db, 'outpasses');
+    await addDoc(outpassesCollection, {
+      ...newOutpass,
+      createdAt: serverTimestamp(),
+    });
+  };
 
-  useEffect(() => {
-    if (!isLoading) {
-      try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(outpasses));
-      } catch (error) {
-        console.error('Failed to write outpasses to localStorage', error);
-      }
-    }
-  }, [outpasses, isLoading]);
-  
-  const addOutpass = useCallback((newOutpass: Omit<Outpass, 'id'>) => {
-    setOutpasses(prev => [
-      { 
-        ...newOutpass,
-        id: `op-${Date.now()}`,
-      },
-      ...prev,
-    ]);
-  }, []);
+  const updateOutpass = async (id: string, updatedData: Partial<Omit<Outpass, 'id'>>) => {
+    const outpassDoc = doc(db, 'outpasses', id);
+    await updateDoc(outpassDoc, updatedData);
+  };
 
-  const updateOutpass = useCallback((id: string, updatedData: Partial<Omit<Outpass, 'id'>>) => {
-    setOutpasses(prev => prev.map(op => op.id === id ? { ...op, ...updatedData } : op));
-  }, []);
-
-  return { outpasses, addOutpass, updateOutpass, isLoading };
+  return { outpasses: outpasses || [], addOutpass, updateOutpass, isLoading, error };
 }

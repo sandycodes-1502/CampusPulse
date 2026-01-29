@@ -76,8 +76,8 @@ function OutpassVerification() {
     setIsVerifying(false);
   };
   
-  const handleMarkAsUsed = (outpass: Outpass) => {
-    updateOutpass(outpass.id, { status: 'used' });
+  const handleMarkAsUsed = async (outpass: Outpass) => {
+    await updateOutpass(outpass.id, { status: 'used' });
     toast({ title: 'Outpass marked as used.' });
     setVerificationResult(null);
     setOutpassId('');

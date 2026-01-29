@@ -38,8 +38,8 @@ export default function OutpassPage() {
   const { toast } = useToast();
   const { outpasses, updateOutpass, isLoading } = useOutpassesStore();
 
-  const handleStatusChange = (outpassId: string, status: 'approved' | 'rejected' | 'used') => {
-    updateOutpass(outpassId, { status });
+  const handleStatusChange = async (outpassId: string, status: 'approved' | 'rejected' | 'used') => {
+    await updateOutpass(outpassId, { status });
     toast({ title: `Outpass has been ${status}.` });
   };
 
@@ -60,7 +60,7 @@ export default function OutpassPage() {
           <CardHeader>
             <CardTitle>Outpass Requests</CardTitle>
             <CardDescription>
-              Manage and track all student outpass requests.
+              Manage and track all student outpass requests from the live database.
             </CardDescription>
           </CardHeader>
           <CardContent>

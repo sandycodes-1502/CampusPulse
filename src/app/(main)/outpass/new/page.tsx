@@ -13,7 +13,6 @@ import { Calendar } from '@/components/ui/calendar';
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -61,8 +60,8 @@ export default function NewOutpassPage() {
     resolver: zodResolver(outpassFormSchema),
   });
 
-  function onSubmit(data: OutpassFormValues) {
-    addOutpass({
+  async function onSubmit(data: OutpassFormValues) {
+    await addOutpass({
       studentId: mockStudent.id,
       studentName: mockStudent.name,
       roomNumber: 'A-101', // Mock room number
@@ -75,7 +74,7 @@ export default function NewOutpassPage() {
 
     toast({
       title: 'Outpass Request Submitted',
-      description: 'Your request is now pending approval.',
+      description: 'Your request is now pending approval and stored in the database.',
     });
     router.push('/outpass');
   }
