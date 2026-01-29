@@ -66,22 +66,31 @@ export default function NewOutpassPage() {
   });
 
   async function onSubmit(data: OutpassFormValues) {
-    await addOutpass({
-      studentId: mockStudent.id,
-      studentName: mockStudent.name,
-      roomNumber: 'A-101', // Mock room number
-      reason: data.reason,
-      destination: data.destination,
-      departureDateTime: data.departureDateTime.toISOString(),
-      returnDateTime: data.returnDateTime.toISOString(),
-      status: 'pending',
-    });
+    try {
+      await addOutpass({
+        studentId: mockStudent.id,
+        studentName: mockStudent.name,
+        roomNumber: 'A-101', // Mock room number
+        reason: data.reason,
+        destination: data.destination,
+        departureDateTime: data.departureDateTime.toISOString(),
+        returnDateTime: data.returnDateTime.toISOString(),
+        status: 'pending',
+      });
 
-    toast({
-      title: 'Outpass Request Submitted',
-      description: 'Your request is now pending approval and stored in the database.',
-    });
-    router.push('/outpass');
+      toast({
+        title: 'Outpass Request Submitted',
+        description: 'Your request is now pending approval and stored in the database.',
+      });
+      router.push('/outpass');
+    } catch (error) {
+      console.error("Failed to submit outpass request:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Submission Failed',
+        description: 'There was a problem submitting your request. Please try again.',
+      });
+    }
   }
 
   return (

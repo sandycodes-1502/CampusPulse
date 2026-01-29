@@ -3,7 +3,7 @@
 import { useCollection } from '@/firebase/firestore/use-collection';
 import type { Outpass } from '@/lib/types';
 import { useFirebase } from '@/firebase/provider';
-import { collection, addDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc } from 'firebase/firestore';
 
 export function useOutpassesStore() {
   const { db } = useFirebase();
@@ -13,7 +13,7 @@ export function useOutpassesStore() {
     const outpassesCollection = collection(db, 'outpasses');
     await addDoc(outpassesCollection, {
       ...newOutpass,
-      createdAt: serverTimestamp(),
+      createdAt: new Date().toISOString(),
     });
   };
 
