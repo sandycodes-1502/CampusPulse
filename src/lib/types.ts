@@ -68,10 +68,7 @@ export type Student = {
 export type EntryExitLog = {
     id: string;
     studentId: string;
-    dateTime: {
-      seconds: number;
-      nanoseconds: number;
-    };
+    dateTime: string;
     type: 'entry' | 'exit';
     recordedBySecurityId: string;
 };

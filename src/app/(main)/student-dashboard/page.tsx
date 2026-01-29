@@ -2,7 +2,7 @@
 
 import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, FilePenLine } from 'lucide-react';
 import Link from 'next/link';
 
 export default function StudentDashboardPage() {
@@ -16,7 +16,7 @@ export default function StudentDashboardPage() {
             Here you can manage your outpasses, submit feedback, and check your fee status.
           </p>
         </div>
-        <div className="grid md:grid-cols-3 gap-4">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="p-6 bg-card border rounded-lg">
                 <h3 className="text-lg font-semibold mb-2">Outpass</h3>
                 <p className="text-muted-foreground mb-4">Request and manage your outpasses.</p>
@@ -36,6 +36,13 @@ export default function StudentDashboardPage() {
                 <p className="text-muted-foreground mb-4">Check your current hostel fee status.</p>
                 <Button asChild>
                     <Link href="/fees">Check Fees <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                </Button>
+            </div>
+            <div className="p-6 bg-card border rounded-lg">
+                <h3 className="text-lg font-semibold mb-2">Submit Complaint</h3>
+                <p className="text-muted-foreground mb-4">Report an issue with hostel facilities.</p>
+                <Button asChild>
+                    <Link href="/complaints/new">Submit Complaint <FilePenLine className="ml-2 h-4 w-4" /></Link>
                 </Button>
             </div>
         </div>

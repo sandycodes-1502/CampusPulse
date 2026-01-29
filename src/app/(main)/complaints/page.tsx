@@ -1,16 +1,9 @@
 'use client';
 
-import {
-  collection,
-  query,
-  orderBy,
-  doc,
-  collectionGroup,
-  limit,
-} from 'firebase/firestore';
 import { MoreHorizontal } from 'lucide-react';
+import { format } from 'date-fns';
+
 import { cn } from '@/lib/utils';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { PageHeader } from '@/components/layout/page-header';
 import {
   Card,
@@ -38,34 +31,18 @@ import {
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Complaint } from '@/lib/types';
-import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useComplaintsStore } from '@/hooks/use-complaints-store';
 
 export default function ComplaintsPage() {
-  const firestore = useFirestore();
   const { toast } = useToast();
-  
-  const complaintsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    // Default to admin view since auth is removed
-    return query(
-      collectionGroup(firestore, 'complaints'),
-      orderBy('submissionDate', 'desc'),
-      limit(50)
-    );
-  }, [firestore]);
-
-  const { data: complaints, isLoading } =
-    useCollection<Complaint>(complaintsQuery);
+  const { complaints, updateComplaint, isLoading } = useComplaintsStore();
 
   const handleStatusChange = (
-    complaint: Complaint,
-    status: 'in progress' | 'resolved'
+    complaintId: string,
+    status: 'open' | 'in progress' | 'resolved'
   ) => {
-    if (!firestore) return;
-    const complaintRef = doc(firestore, 'users', complaint.studentId, 'complaints', complaint.id);
-    updateDocumentNonBlocking(complaintRef, { status });
+    updateComplaint(complaintId, { status });
     toast({ title: `Complaint status updated to ${status}.` });
   };
   
@@ -191,7 +168,17 @@ export default function ComplaintsPage() {
                               <DropdownMenuItem
                                 onClick={() =>
                                   handleStatusChange(
-                                    complaint,
+                                    complaint.id,
+                                    'open'
+                                  )
+                                }
+                              >
+                                Mark as Open
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  handleStatusChange(
+                                    complaint.id,
                                     'in progress'
                                   )
                                 }
@@ -200,7 +187,7 @@ export default function ComplaintsPage() {
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() =>
-                                  handleStatusChange(complaint, 'resolved')
+                                  handleStatusChange(complaint.id, 'resolved')
                                 }
                               >
                                 Mark as Resolved

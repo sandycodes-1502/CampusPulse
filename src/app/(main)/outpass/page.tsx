@@ -1,16 +1,9 @@
 'use client';
 
-import {
-  query,
-  orderBy,
-  doc,
-  collectionGroup,
-  limit,
-} from 'firebase/firestore';
-import { MoreHorizontal } from 'lucide-react';
+import Link from 'next/link';
+import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import { format } from 'date-fns';
 
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { PageHeader } from '@/components/layout/page-header';
 import {
   Card,
@@ -37,29 +30,16 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { Outpass } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
+import { useOutpassesStore } from '@/hooks/use-outpasses-store';
 
 export default function OutpassPage() {
-  const firestore = useFirestore();
   const { toast } = useToast();
+  const { outpasses, updateOutpass, isLoading } = useOutpassesStore();
 
-  const outpassesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    
-    // Default to admin/security view since auth is removed
-    return query(collectionGroup(firestore, 'outpasses'), orderBy('departureDateTime', 'desc'), limit(50));
-    
-  }, [firestore]);
-
-  const { data: outpasses, isLoading } = useCollection<Outpass>(outpassesQuery);
-
-  const handleStatusChange = (outpass: Outpass, status: 'approved' | 'rejected' | 'used') => {
-    if (!firestore || !outpass.studentId) return;
-    const outpassRef = doc(firestore, 'users', outpass.studentId, 'outpasses', outpass.id);
-    updateDocumentNonBlocking(outpassRef, { status });
+  const handleStatusChange = (outpassId: string, status: 'approved' | 'rejected' | 'used') => {
+    updateOutpass(outpassId, { status });
     toast({ title: `Outpass has been ${status}.` });
   };
 
@@ -68,7 +48,12 @@ export default function OutpassPage() {
   return (
     <>
       <PageHeader title="Digital Outpass">
-        {/* "New Outpass" button removed as it's a student-specific action */}
+        <Button asChild>
+            <Link href="/outpass/new">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                New Outpass
+            </Link>
+        </Button>
       </PageHeader>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <Card>
@@ -121,11 +106,12 @@ export default function OutpassPage() {
                       </TableCell>
                       <TableCell>
                         <div className="font-medium md:hidden">{outpass.studentName}</div>
-                        <div className="font-medium">{outpass.reason}</div>
+                        <div className="font-medium">{outpass.destination}</div>
+                        <div className="text-sm text-muted-foreground">{outpass.reason}</div>
                       </TableCell>
                       <TableCell className="hidden sm:table-cell">
-                        {format(new Date(outpass.departureDateTime), 'dd MMM yyyy, p')} -{' '}
-                        {format(new Date(outpass.returnDateTime), 'dd MMM yyyy, p')}
+                        {format(new Date(outpass.departureDateTime), 'dd MMM, p')} -{' '}
+                        {format(new Date(outpass.returnDateTime), 'dd MMM, p')}
                       </TableCell>
                       <TableCell className="hidden sm:table-cell text-center">
                         <Badge
@@ -151,8 +137,8 @@ export default function OutpassPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem onClick={() => handleStatusChange(outpass, 'approved')}>Approve</DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleStatusChange(outpass, 'rejected')}>Reject</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleStatusChange(outpass.id, 'approved')}>Approve</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleStatusChange(outpass.id, 'rejected')}>Reject</DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>

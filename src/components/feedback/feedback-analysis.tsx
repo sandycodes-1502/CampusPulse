@@ -2,12 +2,10 @@
 
 import { useState } from 'react';
 import { Loader, Wand2, Inbox } from 'lucide-react';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { format } from 'date-fns';
 
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { analyzeStudentFeedback } from '@/ai/flows/analyze-student-feedback';
-import type { Feedback } from '@/lib/types';
+import { useFeedbackStore } from '@/hooks/use-feedback-store';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -20,23 +18,18 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
+
+const mockAnalysisSummary = `Based on the feedback, several key themes have emerged:
+
+1.  **Wi-Fi Connectivity**: The most common issue is the unreliable Wi-Fi in the B-Wing hostel, with multiple students reporting frequent disconnections.
+2.  **Mess Food Quality**: Feedback on mess food is mixed. While breakfast is generally appreciated, there are calls to improve the variety and quality of dinner.
+3.  **Library Hours**: Several students have requested an extension of library operating hours during exam periods to facilitate late-night study sessions.
+4.  **Sports Facilities**: Positive comments were received regarding the new basketball court, but the gym equipment requires maintenance.`;
 
 export function FeedbackAnalysis() {
   const { toast } = useToast();
-  const firestore = useFirestore();
-
-  const feedbackQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(
-      collection(firestore, 'submitted_feedback'),
-      orderBy('submissionDate', 'desc')
-    );
-  }, [firestore]);
-
-  const { data: feedback, isLoading: isLoadingFeedback } =
-    useCollection<Feedback>(feedbackQuery);
+  const { feedback, isLoading: isLoadingFeedback } = useFeedbackStore();
 
   const [isLoading, setIsLoading] = useState(false);
   const [analysis, setAnalysis] = useState<string | null>(null);
@@ -54,25 +47,16 @@ export function FeedbackAnalysis() {
     setIsLoading(true);
     setAnalysis(null);
 
-    try {
-      const allFeedbackText = feedback.map((f) => `- ${f.feedbackText}`).join('\n');
-      const result = await analyzeStudentFeedback({ feedback: allFeedbackText });
-      setAnalysis(result.summary);
-      toast({
-        title: 'Analysis Complete',
-        description: 'Key trends from student feedback have been summarized.',
-      });
-    } catch (error) {
-      console.error('Analysis failed:', error);
-      toast({
-        title: 'Analysis Failed',
-        description:
-          'Something went wrong while analyzing the feedback. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    // Simulate AI analysis delay
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+
+    setAnalysis(mockAnalysisSummary);
+    toast({
+      title: 'Analysis Complete',
+      description: 'Key trends from student feedback have been summarized.',
+    });
+    
+    setIsLoading(false);
   };
 
   if (isLoadingFeedback) {

@@ -1,21 +1,10 @@
 'use client';
 
-import {
-  collection,
-  query,
-  orderBy,
-  doc,
-  deleteDoc,
-} from 'firebase/firestore';
 import { FileEdit, PlusCircle, Trash } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 
-import {
-  useFirestore,
-  useCollection,
-  useMemoFirebase,
-} from '@/firebase';
 import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
 import {
@@ -27,9 +16,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { Announcement } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,27 +28,20 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { useAnnouncementsStore } from '@/hooks/use-announcements-store';
 
 export default function AnnouncementsPage() {
-  const firestore = useFirestore();
+  const router = useRouter();
   const { toast } = useToast();
-
-  const announcementsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(
-      collection(firestore, 'announcements'),
-      orderBy('postDate', 'desc')
-    );
-  }, [firestore]);
-
-  const { data: announcements, isLoading } =
-    useCollection<Announcement>(announcementsQuery);
+  const { announcements, removeAnnouncement, isLoading } = useAnnouncementsStore();
 
   const handleDelete = (id: string) => {
-    if (!firestore) return;
-    const announcementRef = doc(firestore, 'announcements', id);
-    deleteDocumentNonBlocking(announcementRef);
+    removeAnnouncement(id);
     toast({ title: 'Announcement deleted.' });
+  };
+
+  const handleEdit = (id: string) => {
+    router.push(`/announcements/edit/${id}`);
   };
 
   const canManage = true; // Auth removed, default to admin view
@@ -71,7 +51,7 @@ export default function AnnouncementsPage() {
       <PageHeader title="Announcements">
         {canManage && (
           <Button asChild>
-            <Link href="#">
+            <Link href="/announcements/new">
               <PlusCircle className="mr-2 h-4 w-4" />
               New Announcement
             </Link>
@@ -117,7 +97,7 @@ export default function AnnouncementsPage() {
               </CardContent>
               {canManage && (
                 <CardFooter className="flex justify-end gap-2">
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={() => handleEdit(announcement.id)}>
                     <FileEdit className="mr-2 h-4 w-4" />
                     Edit
                   </Button>

@@ -8,7 +8,7 @@ const STORAGE_KEY = 'campus-pulse-feedback';
 
 export function useFeedbackStore() {
   const [feedback, setFeedback] = useState<Feedback[]>([]);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     try {
@@ -22,29 +22,29 @@ export function useFeedbackStore() {
       console.error('Failed to read from localStorage', error);
       setFeedback(initialFeedback);
     }
-    setIsInitialized(true);
+    setIsLoading(false);
   }, []);
 
   useEffect(() => {
-    if (isInitialized) {
+    if (!isLoading) {
       try {
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(feedback));
       } catch (error) {
         console.error('Failed to write to localStorage', error);
       }
     }
-  }, [feedback, isInitialized]);
+  }, [feedback, isLoading]);
   
-  const addFeedback = useCallback((newFeedback: Omit<Feedback, 'id' | 'date'>) => {
+  const addFeedback = useCallback((newFeedback: Omit<Feedback, 'id' | 'submissionDate'>) => {
     setFeedback(prev => [
-      ...prev,
       { 
         ...newFeedback,
-        id: `F${prev.length + 1}`,
-        date: new Date().toISOString().split('T')[0],
+        id: `fb-${Date.now()}`,
+        submissionDate: new Date().toISOString(),
       },
+      ...prev,
     ]);
   }, []);
 
-  return { feedback, addFeedback, isInitialized };
+  return { feedback, addFeedback, isLoading };
 }

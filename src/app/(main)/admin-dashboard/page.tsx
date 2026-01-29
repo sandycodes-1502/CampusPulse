@@ -10,17 +10,9 @@ import {
   FilePenLine,
 } from 'lucide-react';
 import { Bar, BarChart, XAxis, YAxis, Tooltip } from 'recharts';
-import {
-  collection,
-  query,
-  orderBy,
-  limit,
-  where,
-  collectionGroup,
-} from 'firebase/firestore';
 import { format } from 'date-fns';
+import { useMemo, useState, useEffect } from 'react';
 
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
 import {
@@ -45,28 +37,16 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart';
 import { Skeleton } from '@/components/ui/skeleton';
-import type {
-  Announcement,
-  Complaint,
-  Student,
-  Room as HostelRoom,
-  Outpass,
-} from '@/lib/types';
+import type { Complaint, Outpass } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { useMemo } from 'react';
-
-const chartData = [
-  { time: '8am', entries: 5, exits: 2 },
-  { time: '9am', entries: 12, exits: 4 },
-  { time: '10am', entries: 8, exits: 15 },
-  { time: '11am', entries: 7, exits: 5 },
-  { time: '12pm', entries: 25, exits: 18 },
-  { time: '1pm', entries: 15, exits: 22 },
-  { time: '2pm', entries: 18, exits: 10 },
-  { time: '3pm', entries: 20, exits: 30 },
-  { time: '4pm', entries: 35, exits: 25 },
-  { time: '5pm', entries: 40, exits: 50 },
-];
+import {
+  students,
+  rooms,
+  dailyEntryExit,
+} from '@/lib/data';
+import { useAnnouncementsStore } from '@/hooks/use-announcements-store';
+import { useComplaintsStore } from '@/hooks/use-complaints-store';
+import { useOutpassesStore } from '@/hooks/use-outpasses-store';
 
 const chartConfig = {
   entries: {
@@ -80,78 +60,37 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export default function AdminDashboardPage() {
-  const firestore = useFirestore();
+  const { announcements, isLoading: isLoadingAnnouncements } = useAnnouncementsStore();
+  const { complaints, isLoading: isLoadingComplaints } = useComplaintsStore();
+  const { outpasses, isLoading: isLoadingOutpasses } = useOutpassesStore();
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
 
-  const announcementsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(
-      collection(firestore, 'announcements'),
-      orderBy('postDate', 'desc'),
-      limit(3)
-    );
-  }, [firestore]);
+  // Simulate loading for static data
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoadingStats(false), 500);
+    return () => clearTimeout(timer);
+  }, []);
 
-  const complaintsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(
-      collectionGroup(firestore, 'complaints'),
-      orderBy('submissionDate', 'desc'),
-      limit(5)
-    );
-  }, [firestore]);
-
-  const studentsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collectionGroup(firestore, 'students'), orderBy('name'));
-  }, [firestore]);
-
-  const roomsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'hostel_rooms'), orderBy('roomNumber'));
-  }, [firestore]);
-
-  const pendingOutpassesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(
-      collectionGroup(firestore, 'outpasses'),
-      where('status', '==', 'pending')
-    );
-  }, [firestore]);
-
-  const activeComplaintsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(
-      collectionGroup(firestore, 'complaints'),
-      where('status', 'in', ['open', 'in progress'])
-    );
-  }, [firestore]);
-
-  const { data: announcements, isLoading: isLoadingAnnouncements } =
-    useCollection<Announcement>(announcementsQuery);
-  const { data: complaints, isLoading: isLoadingComplaints } =
-    useCollection<Complaint>(complaintsQuery);
-  const { data: students, isLoading: isLoadingStudents } =
-    useCollection<Student>(studentsQuery);
-  const { data: rooms, isLoading: isLoadingRooms } =
-    useCollection<HostelRoom>(roomsQuery);
-  const { data: pendingOutpasses, isLoading: isLoadingPendingOutpasses } =
-    useCollection<Outpass>(pendingOutpassesQuery);
-  const { data: activeComplaints, isLoading: isLoadingActiveComplaints } =
-    useCollection<Complaint>(activeComplaintsQuery);
+  const pendingOutpasses = useMemo(
+    () => outpasses.filter((o) => o.status === 'pending'),
+    [outpasses]
+  );
+  const activeComplaints = useMemo(
+    () => complaints.filter((c) => ['open', 'in progress'].includes(c.status)),
+    [complaints]
+  );
+  
+  const recentAnnouncements = useMemo(() => announcements.slice(0, 3), [announcements]);
+  const recentComplaints = useMemo(() => complaints.slice(0, 5), [complaints]);
 
   const roomsOccupiedCount = useMemo(() => {
-    if (!rooms || !students) return 0;
     const occupiedRoomIds = new Set(
       students.map((s) => s.hostelRoomId).filter(Boolean)
     );
     return occupiedRoomIds.size;
-  }, [students, rooms]);
+  }, []);
 
-  const isLoadingStats =
-    isLoadingStudents ||
-    isLoadingRooms ||
-    isLoadingPendingOutpasses ||
-    isLoadingActiveComplaints;
+  const isLoading = isLoadingStats || isLoadingAnnouncements || isLoadingComplaints || isLoadingOutpasses;
 
   return (
     <>
@@ -166,10 +105,10 @@ export default function AdminDashboardPage() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              {isLoadingStats ? (
+              {isLoading ? (
                 <Skeleton className="h-8 w-24" />
               ) : (
-                <div className="text-2xl font-bold">{students?.length ?? 0}</div>
+                <div className="text-2xl font-bold">{students.length}</div>
               )}
               <p className="text-xs text-muted-foreground">
                 All registered students
@@ -184,19 +123,17 @@ export default function AdminDashboardPage() {
               <BedDouble className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              {isLoadingStats ? (
+              {isLoading ? (
                 <Skeleton className="h-8 w-24" />
               ) : (
                 <div className="text-2xl font-bold">
-                  {roomsOccupiedCount} / {rooms?.length ?? 0}
+                  {roomsOccupiedCount} / {rooms.length}
                 </div>
               )}
               <p className="text-xs text-muted-foreground">
-                {rooms && rooms.length > 0 && roomsOccupiedCount > 0
-                  ? `${Math.round(
-                      (roomsOccupiedCount / rooms.length) * 100
-                    )}% occupancy rate`
-                  : '...'}
+                {`${Math.round(
+                    (roomsOccupiedCount / rooms.length) * 100
+                  )}% occupancy rate`}
               </p>
             </CardContent>
           </Card>
@@ -208,11 +145,11 @@ export default function AdminDashboardPage() {
               <Ticket className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              {isLoadingStats ? (
+              {isLoading ? (
                 <Skeleton className="h-8 w-12" />
               ) : (
                 <div className="text-2xl font-bold">
-                  {pendingOutpasses?.length ?? 0}
+                  {pendingOutpasses.length}
                 </div>
               )}
               <p className="text-xs text-muted-foreground">Awaiting approval</p>
@@ -226,11 +163,11 @@ export default function AdminDashboardPage() {
               <FilePenLine className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              {isLoadingStats ? (
+              {isLoading ? (
                 <Skeleton className="h-8 w-12" />
               ) : (
                 <div className="text-2xl font-bold">
-                  {activeComplaints?.length ?? 0}
+                  {activeComplaints.length}
                 </div>
               )}
               <p className="text-xs text-muted-foreground">
@@ -247,7 +184,7 @@ export default function AdminDashboardPage() {
             </CardHeader>
             <CardContent className="pl-2">
               <ChartContainer config={chartConfig} className="w-full h-[350px]">
-                <BarChart accessibilityLayer data={chartData}>
+                <BarChart accessibilityLayer data={dailyEntryExit}>
                   <XAxis
                     dataKey="time"
                     stroke="#888888"
@@ -299,10 +236,10 @@ export default function AdminDashboardPage() {
                         </div>
                       </div>
                     ))
-                  : announcements?.map((ann) => (
+                  : recentAnnouncements.map((ann) => (
                       <div key={ann.id} className="flex items-start gap-4">
                         <div className="bg-primary/10 p-2 rounded-full">
-                          <Bell className="h-5 w-5 text-primary-foreground" />
+                          <Bell className="h-5 w-5 text-primary" />
                         </div>
                         <div>
                           <p className="text-sm font-medium leading-none">
@@ -361,7 +298,7 @@ export default function AdminDashboardPage() {
                         </TableCell>
                       </TableRow>
                     ))
-                  : complaints?.map((complaint) => (
+                  : recentComplaints.map((complaint) => (
                       <TableRow key={complaint.id}>
                         <TableCell>
                           <div className="font-medium">

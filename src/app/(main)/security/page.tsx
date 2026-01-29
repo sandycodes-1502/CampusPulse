@@ -2,18 +2,6 @@
 
 import { useState } from 'react';
 import {
-  collectionGroup,
-  doc,
-  serverTimestamp,
-  query,
-  where,
-  orderBy,
-  limit,
-  getDocs,
-  collection,
-  documentId,
-} from 'firebase/firestore';
-import {
   QrCode,
   Search,
   LogOut,
@@ -25,7 +13,6 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 
-import { useFirestore } from '@/firebase';
 import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
 import {
@@ -52,62 +39,45 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import type { Outpass, EntryExitLog } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { useCollection, useMemoFirebase } from '@/firebase';
+import { useOutpassesStore } from '@/hooks/use-outpasses-store';
+import { entryExitLogs } from '@/lib/data';
 
 type OutpassVerificationResult = (Outpass & { id: string }) | { status: 'Not Found' | 'Not Approved' | 'Used' | 'Rejected' };
 
 function OutpassVerification() {
-  const firestore = useFirestore();
   const { toast } = useToast();
+  const { outpasses, isLoading: isLoadingOutpasses, updateOutpass } = useOutpassesStore();
   const [outpassId, setOutpassId] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationResult, setVerificationResult] = useState<OutpassVerificationResult | null>(null);
 
-  const approvedOutpassesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(
-      collectionGroup(firestore, 'outpasses'),
-      where('status', '==', 'approved'),
-      orderBy('departureDateTime', 'desc')
-    );
-  }, [firestore]);
-
-  const { data: approvedOutpasses, isLoading: isLoadingOutpasses } = useCollection<Outpass>(approvedOutpassesQuery);
+  const approvedOutpasses = outpasses.filter((o) => o.status === 'approved');
 
   const handleVerify = async () => {
-    if (!outpassId || !firestore) return;
+    if (!outpassId) return;
     setIsVerifying(true);
     setVerificationResult(null);
 
-    try {
-      const q = query(collectionGroup(firestore, 'outpasses'), where(documentId(), '==', outpassId), limit(1));
-      const querySnapshot = await getDocs(q);
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 500));
 
-      if (querySnapshot.empty) {
-        setVerificationResult({ status: 'Not Found' });
-      } else {
-        const outpassDoc = querySnapshot.docs[0];
-        const outpass = { id: outpassDoc.id, ...outpassDoc.data() } as Outpass;
-        if (outpass.status === 'approved') {
-          setVerificationResult(outpass);
-        } else {
-          setVerificationResult({ status: outpass.status as 'Not Approved' | 'Used' | 'Rejected' });
-        }
-      }
-    } catch (e) {
-      console.error(e);
+    const foundOutpass = outpasses.find(o => o.id === outpassId);
+
+    if (!foundOutpass) {
       setVerificationResult({ status: 'Not Found' });
-      toast({ title: 'Error verifying outpass', variant: 'destructive' });
-    } finally {
-      setIsVerifying(false);
+    } else {
+      if (foundOutpass.status === 'approved') {
+        setVerificationResult(foundOutpass);
+      } else {
+        setVerificationResult({ status: foundOutpass.status as 'Not Approved' | 'Used' | 'Rejected' });
+      }
     }
+    
+    setIsVerifying(false);
   };
   
   const handleMarkAsUsed = (outpass: Outpass) => {
-    if (!firestore || !outpass.studentId) return;
-    const outpassRef = doc(firestore, 'users', outpass.studentId, 'outpasses', outpass.id);
-    updateDocumentNonBlocking(outpassRef, { status: 'used' });
+    updateOutpass(outpass.id, { status: 'used' });
     toast({ title: 'Outpass marked as used.' });
     setVerificationResult(null);
     setOutpassId('');
@@ -241,31 +211,35 @@ function OutpassVerification() {
 }
 
 function EntryExitLogging() {
-  const firestore = useFirestore();
   const { toast } = useToast();
+  const [logs, setLogs] = useState<EntryExitLog[]>([]);
+  const [isLoadingLogs, setIsLoadingLogs] = useState(true);
 
-  const logsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'entry_exit_logs'), orderBy('dateTime', 'desc'), limit(10));
-  }, [firestore]);
-
-  const { data: logs, isLoading: isLoadingLogs } = useCollection<EntryExitLog>(logsQuery);
+  useState(() => {
+    // Simulate fetching data
+    setTimeout(() => {
+      setLogs(entryExitLogs.slice(0, 10));
+      setIsLoadingLogs(false);
+    }, 500);
+  });
 
   const handleManualLog = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!firestore) return;
 
     const formData = new FormData(event.currentTarget);
     const studentId = formData.get('studentId') as string;
     const type = formData.get('logType') as 'entry' | 'exit';
 
     if (studentId && type) {
-      addDocumentNonBlocking(collection(firestore, 'entry_exit_logs'), {
+      const newLog = {
+        id: `log${Date.now()}`,
         studentId,
         type,
-        dateTime: serverTimestamp(),
-        recordedBySecurityId: 'security_desk', // Hardcoded as auth is removed
-      });
+        dateTime: new Date().toISOString(),
+        recordedBySecurityId: 'security_desk', // Hardcoded
+      };
+      setLogs(prev => [newLog, ...prev].slice(0, 10));
+
       toast({ title: 'Log recorded successfully.' });
       (event.target as HTMLFormElement).reset();
     }
@@ -298,12 +272,12 @@ function EntryExitLogging() {
                     <TableCell className="text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
                   </TableRow>
                 ))
-              ) : logs?.length === 0 ? (
+              ) : logs.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={3} className="h-24 text-center">No logs recorded yet.</TableCell>
                 </TableRow>
               ) : (
-                logs?.map((log) => (
+                logs.map((log) => (
                   <TableRow key={log.id}>
                     <TableCell>
                       <div className="font-medium">{log.studentId}</div>
@@ -318,7 +292,7 @@ function EntryExitLogging() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      {log.dateTime ? format(new Date(log.dateTime.seconds * 1000), 'p') : 'Just now'}
+                      {format(new Date(log.dateTime), 'p')}
                     </TableCell>
                   </TableRow>
                 ))

@@ -1,9 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
-import { collectionGroup, query, orderBy, limit } from 'firebase/firestore';
-
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/layout/page-header';
 import {
   Table,
@@ -17,17 +14,19 @@ import { Badge } from '@/components/ui/badge';
 import type { Fee } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { fees as initialFees } from '@/lib/data';
 
 export default function FeesPage() {
-  const firestore = useFirestore();
+  const [fees, setFees] = useState<Fee[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const feesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    // Default to admin view since auth is removed
-    return query(collectionGroup(firestore, 'hostel_fees'), orderBy('studentName'), limit(50));
-  }, [firestore]);
-
-  const { data: fees, isLoading } = useCollection<Fee>(feesQuery);
+  useEffect(() => {
+    // Simulate fetching data
+    setTimeout(() => {
+      setFees(initialFees);
+      setIsLoading(false);
+    }, 500);
+  }, []);
 
   return (
     <>
@@ -65,14 +64,14 @@ export default function FeesPage() {
                     </TableCell>
                   </TableRow>
                 ))
-              ) : fees?.length === 0 ? (
+              ) : fees.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="h-24 text-center">
                     No fee records found.
                   </TableCell>
                 </TableRow>
               ) : (
-                fees?.map((fee: Fee) => (
+                fees.map((fee: Fee) => (
                   <TableRow key={fee.id}>
                     <TableCell>{fee.studentId}</TableCell>
                     <TableCell>{fee.studentName}</TableCell>

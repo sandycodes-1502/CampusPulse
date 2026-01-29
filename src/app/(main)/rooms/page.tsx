@@ -1,14 +1,7 @@
 'use client';
 
-import { useMemo } from 'react';
-import { collection, collectionGroup, query, orderBy, limit } from 'firebase/firestore';
-
+import { useMemo, useState, useEffect } from 'react';
 import { PageHeader } from '@/components/layout/page-header';
-import {
-  useFirestore,
-  useCollection,
-  useMemoFirebase,
-} from '@/firebase';
 import {
   Table,
   TableBody,
@@ -20,51 +13,40 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Room as HostelRoom, Student } from '@/lib/types';
+import { rooms as initialRooms, students as initialStudents } from '@/lib/data';
 
 interface PopulatedRoom extends HostelRoom {
   students: Student[];
 }
 
 export default function RoomsPage() {
-  const firestore = useFirestore();
+  const [populatedRooms, setPopulatedRooms] = useState<PopulatedRoom[] | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const roomsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'hostel_rooms'), orderBy('roomNumber'));
-  }, [firestore]);
-
-  const studentsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    // This is a collection group query to get all students from all users.
-    // Firestore security rules must allow this for the admin role.
-    return query(collectionGroup(firestore, 'students'), orderBy('name'), limit(100));
-  }, [firestore]);
-
-  const { data: rooms, isLoading: isLoadingRooms } =
-    useCollection<HostelRoom>(roomsQuery);
-  const { data: students, isLoading: isLoadingStudents } =
-    useCollection<Student>(studentsQuery);
-
-  const populatedRooms: PopulatedRoom[] | null = useMemo(() => {
-    if (!rooms || !students) return null;
-
-    const studentsByRoomId = new Map<string, Student[]>();
-    students.forEach((student) => {
-      if (student.hostelRoomId) {
-        if (!studentsByRoomId.has(student.hostelRoomId)) {
-          studentsByRoomId.set(student.hostelRoomId, []);
+  useEffect(() => {
+    // Simulate fetching and processing data
+    const timer = setTimeout(() => {
+      const studentsByRoomId = new Map<string, Student[]>();
+      initialStudents.forEach((student) => {
+        if (student.hostelRoomId) {
+          if (!studentsByRoomId.has(student.hostelRoomId)) {
+            studentsByRoomId.set(student.hostelRoomId, []);
+          }
+          studentsByRoomId.get(student.hostelRoomId)!.push(student);
         }
-        studentsByRoomId.get(student.hostelRoomId)!.push(student);
-      }
-    });
+      });
 
-    return rooms.map((room) => ({
-      ...room,
-      students: studentsByRoomId.get(room.id) || [],
-    }));
-  }, [rooms, students]);
+      const finalRooms = initialRooms.map((room) => ({
+        ...room,
+        students: studentsByRoomId.get(room.id) || [],
+      }));
 
-  const isLoading = isLoadingRooms || isLoadingStudents;
+      setPopulatedRooms(finalRooms);
+      setIsLoading(false);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <>
