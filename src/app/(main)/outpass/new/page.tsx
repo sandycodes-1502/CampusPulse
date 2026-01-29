@@ -75,7 +75,7 @@ export default function NewOutpassPage() {
       // Generate new unique ID
       const q = query(outpassesRef, orderBy('id', 'desc'), limit(1));
       const querySnapshot = await getDocs(q);
-      const newId = querySnapshot.empty ? '1111' : (parseInt(querySnapshot.docs[0].data().id, 10) + 1).toString();
+      const newId = querySnapshot.empty ? 1111 : querySnapshot.docs[0].data().id + 1;
 
       await addDoc(outpassesRef, {
           id: newId,

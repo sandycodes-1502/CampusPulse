@@ -62,12 +62,19 @@ function OutpassVerification() {
 
   const handleVerify = async () => {
     if (!outpassId) return;
+    
+    const numericOutpassId = parseInt(outpassId, 10);
+    if (isNaN(numericOutpassId)) {
+        toast({ variant: 'destructive', title: 'Invalid ID format', description: 'Outpass ID must be a number.' });
+        return;
+    }
+
     setIsVerifying(true);
     setVerificationResult(null);
     
     try {
       const { db } = getFirebase();
-      const q = query(collection(db, "outpass-data"), where("id", "==", outpassId));
+      const q = query(collection(db, "outpass-data"), where("id", "==", numericOutpassId));
       const querySnapshot = await getDocs(q);
 
       if (querySnapshot.empty) {

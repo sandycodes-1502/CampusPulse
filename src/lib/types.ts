@@ -30,7 +30,7 @@ export type Feedback = {
 
 export type Outpass = {
   docId: string; // The actual Firestore document ID
-  id: string; // Your custom 4-digit string ID
+  id: number; // Your custom 4-digit numeric ID
   name: string;
   reason: string;
   duration: {
