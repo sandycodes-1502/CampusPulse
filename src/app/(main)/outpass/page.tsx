@@ -81,12 +81,14 @@ export default function OutpassPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[200px] hidden md:table-cell">Student</TableHead>
+                  <TableHead className="w-[100px]">ID</TableHead>
+                  <TableHead>Student Name</TableHead>
                   <TableHead>Reason</TableHead>
-                  <TableHead className="hidden sm:table-cell">Dates</TableHead>
-                  <TableHead className="hidden sm:table-cell text-center">Status</TableHead>
+                  <TableHead className="hidden md:table-cell">From</TableHead>
+                  <TableHead className="hidden md:table-cell">To</TableHead>
+                  <TableHead className="text-center">Status</TableHead>
                   {isActionable && (
-                    <TableHead className="w-[50px]">
+                    <TableHead className="text-right">
                       <span className="sr-only">Actions</span>
                     </TableHead>
                   )}
@@ -96,37 +98,43 @@ export default function OutpassPage() {
                 {isLoading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
-                      <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-32" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-48" /></TableCell>
-                      <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-32" /></TableCell>
-                      <TableCell className="hidden sm:table-cell text-center"><Skeleton className="h-6 w-20 mx-auto" /></TableCell>
-                      {isActionable && <TableCell><Skeleton className="h-8 w-8 ml-auto" /></TableCell>}
+                      <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
+                      <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
+                      <TableCell className="text-center"><Skeleton className="h-6 w-20 mx-auto" /></TableCell>
+                      {isActionable && (
+                          <TableCell className="text-right">
+                              <Skeleton className="h-8 w-8 ml-auto" />
+                          </TableCell>
+                      )}
                     </TableRow>
                   ))
                 ) : outpasses?.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={isActionable ? 5 : 4} className="h-24 text-center">
+                    <TableCell colSpan={isActionable ? 7 : 6} className="h-24 text-center">
                       No outpass requests found.
                     </TableCell>
                   </TableRow>
                 ) : (
                   outpasses?.map((outpass) => (
                     <TableRow key={outpass.docId}>
-                      <TableCell className="hidden md:table-cell">
+                      <TableCell className="font-medium">{outpass.id}</TableCell>
+                      <TableCell>
                         <div className="font-medium">{outpass.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          ID: {outpass.id}
+                        <div className="text-sm text-muted-foreground md:hidden">
+                          {format(outpass.duration.startdate.toDate(), 'dd MMM, p')} - {format(outpass.duration.enddate.toDate(), 'dd MMM, p')}
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="font-medium md:hidden">{outpass.name}</div>
-                        <div className="text-sm text-muted-foreground">{outpass.reason}</div>
+                      <TableCell>{outpass.reason}</TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {format(outpass.duration.startdate.toDate(), 'dd MMM, p')}
                       </TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        {format(outpass.duration.startdate.toDate(), 'dd MMM, p')} -{' '}
+                      <TableCell className="hidden md:table-cell">
                         {format(outpass.duration.enddate.toDate(), 'dd MMM, p')}
                       </TableCell>
-                      <TableCell className="hidden sm:table-cell text-center">
+                      <TableCell className="text-center">
                         <Badge
                           variant="outline"
                           className={cn('capitalize',
@@ -140,7 +148,7 @@ export default function OutpassPage() {
                         </Badge>
                       </TableCell>
                       {isActionable && (
-                        <TableCell>
+                        <TableCell className="text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button aria-haspopup="true" size="icon" variant="ghost" disabled={outpass.status !== 'pending'}>
