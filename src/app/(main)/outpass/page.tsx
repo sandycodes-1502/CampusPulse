@@ -40,10 +40,10 @@ import { getFirebase } from '@/firebase/client-provider';
 export default function OutpassPage() {
   const { toast } = useToast();
   const { outpasses, isLoading } = useOutpassesStore();
+  const { db } = getFirebase();
 
   const handleStatusChange = async (docId: string, status: 'approved' | 'rejected' | 'used') => {
     try {
-      const { db } = getFirebase();
       const outpassRef = doc(db, 'outpass-data', docId);
       await updateDoc(outpassRef, { status });
       toast({ title: `Outpass has been ${status}.` });

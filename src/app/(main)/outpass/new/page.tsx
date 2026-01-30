@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -56,6 +55,7 @@ type OutpassFormValues = z.infer<typeof outpassFormSchema>;
 export default function NewOutpassPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { db } = getFirebase();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<OutpassFormValues>({
@@ -69,7 +69,6 @@ export default function NewOutpassPage() {
   async function onSubmit(data: OutpassFormValues) {
     setIsSubmitting(true);
     try {
-      const { db } = getFirebase();
       const outpassesRef = collection(db, 'outpass-data');
       
       // Generate new unique ID

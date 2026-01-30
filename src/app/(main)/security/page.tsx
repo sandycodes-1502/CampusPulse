@@ -51,6 +51,7 @@ type OutpassVerificationResult = Outpass | { status: 'Not Found' | 'Not Approved
 function OutpassVerification() {
   const { toast } = useToast();
   const { outpasses, isLoading: isLoadingOutpasses } = useOutpassesStore();
+  const { db } = getFirebase();
   const [outpassId, setOutpassId] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationResult, setVerificationResult] = useState<OutpassVerificationResult | null>(null);
@@ -73,7 +74,6 @@ function OutpassVerification() {
     setVerificationResult(null);
     
     try {
-      const { db } = getFirebase();
       const q = query(collection(db, "outpass-data"), where("id", "==", numericOutpassId));
       const querySnapshot = await getDocs(q);
 
@@ -99,7 +99,6 @@ function OutpassVerification() {
   
   const handleMarkAsUsed = async (outpass: Outpass) => {
     try {
-        const { db } = getFirebase();
         const outpassRef = doc(db, 'outpass-data', outpass.docId);
         await updateDoc(outpassRef, { status: 'used' });
         toast({ title: 'Outpass marked as used.' });
