@@ -30,7 +30,7 @@ import { AppLogo } from '@/components/app-logo';
 const studentMenuItems = [
     { href: '/student-dashboard', label: 'Student Dashboard', icon: LayoutDashboard },
     { href: '/outpass', label: 'My Outpasses', icon: Ticket },
-    { href: '/fees', label: 'My Fees', icon: CircleDollarSign },
+    { href: '/my-fees', label: 'My Fees', icon: CircleDollarSign },
     { href: '/complaints', label: 'My Complaints', icon: FilePenLine },
     { href: '/feedback/submit', label: 'Submit Feedback', icon: Megaphone },
 ];

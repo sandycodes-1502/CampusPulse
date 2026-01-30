@@ -35,7 +35,7 @@ export default function StudentDashboardPage() {
                 <h3 className="text-lg font-semibold mb-2">Fee Status</h3>
                 <p className="text-muted-foreground mb-4">Check your current hostel fee status.</p>
                 <Button asChild>
-                    <Link href="/fees">Check Fees <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                    <Link href="/my-fees">Check Fees <ArrowRight className="ml-2 h-4 w-4" /></Link>
                 </Button>
             </div>
             <div className="p-6 bg-card border rounded-lg">
