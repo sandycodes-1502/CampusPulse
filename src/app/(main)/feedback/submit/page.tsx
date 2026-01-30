@@ -6,7 +6,7 @@ import { z } from 'zod';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { getFirestore, collection, addDoc, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, Timestamp } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -78,10 +78,11 @@ export default function SubmitFeedbackPage() {
         router.push('/student-dashboard');
     } catch (error) {
         console.error("Failed to submit feedback:", error);
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         toast({
             variant: 'destructive',
             title: 'Submission Failed',
-            description: 'There was a problem with your request.',
+            description: `There was a problem with your request: ${errorMessage}`,
         });
     } finally {
         setIsSubmitting(false);
