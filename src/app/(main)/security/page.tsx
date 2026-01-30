@@ -13,7 +13,7 @@ import {
   UserCheck,
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { getFirestore, doc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 
 
 import { PageHeader } from '@/components/layout/page-header';

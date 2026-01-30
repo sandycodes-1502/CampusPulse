@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import { format } from 'date-fns';
-import { getFirestore, doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc } from 'firebase/firestore';
 
 import { PageHeader } from '@/components/layout/page-header';
 import {
@@ -123,9 +123,6 @@ export default function OutpassPage() {
                       <TableCell className="font-medium">{outpass.id}</TableCell>
                       <TableCell>
                         <div className="font-medium">{outpass.name}</div>
-                        <div className="text-sm text-muted-foreground md:hidden">
-                          {format(outpass.duration.startdate.toDate(), 'dd MMM, p')} - {format(outpass.duration.enddate.toDate(), 'dd MMM, p')}
-                        </div>
                       </TableCell>
                       <TableCell>{outpass.reason}</TableCell>
                       <TableCell className="hidden md:table-cell">

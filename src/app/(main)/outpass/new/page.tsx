@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { useState } from 'react';
-import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, limit, getDocs, Timestamp } from 'firebase/firestore';
 
 
 import { Button } from '@/components/ui/button';
@@ -71,7 +71,6 @@ export default function NewOutpassPage() {
     try {
       const outpassesRef = collection(db, 'outpass-data');
       
-      // Generate new unique ID
       const q = query(outpassesRef, orderBy('id', 'desc'), limit(1));
       const querySnapshot = await getDocs(q);
       const newId = querySnapshot.empty ? 1111 : querySnapshot.docs[0].data().id + 1;
