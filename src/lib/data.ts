@@ -1,4 +1,4 @@
-import type { Student, Room, Announcement, Complaint, Feedback, Fee, EntryExitLog } from './types';
+import type { Student, Room, Announcement, Complaint, Fee, EntryExitLog } from './types';
 import { subDays, formatISO } from 'date-fns';
 
 export const students: Student[] = [
@@ -31,11 +31,6 @@ export const initialComplaints: Complaint[] = [
     { id: 'comp04', studentId: 'student02', studentName: 'Bob Williams', roomNumber: 'A-101', complaintText: 'Noise disturbance from the adjacent room late at night.', submissionDate: formatISO(subDays(new Date(), 2)), status: 'open' },
     { id: 'comp05', studentId: 'student04', studentName: 'Diana Miller', roomNumber: 'B-205', complaintText: 'A chair in the common area is broken.', submissionDate: formatISO(subDays(new Date(), 4)), status: 'in progress' },
     { id: 'comp06', studentId: 'student06', studentName: 'Fiona Garcia', roomNumber: 'B-206', complaintText: 'I have lost my room key and need a replacement.', submissionDate: formatISO(subDays(new Date(), 1)), status: 'open' },
-];
-
-export const initialFeedback: Feedback[] = [
-    { id: 'fb01', studentId: 'student02', studentName: 'Bob Williams', feedbackText: 'The quality of food in the mess has improved a lot. Keep it up!', submissionDate: formatISO(subDays(new Date(), 4)), category: 'Hostel' },
-    { id: 'fb02', studentId: 'student04', studentName: 'Diana Miller', feedbackText: 'We need more books related to Civil Engineering in the library.', submissionDate: formatISO(subDays(new Date(), 10)), category: 'College' },
 ];
 
 export const fees: Fee[] = [

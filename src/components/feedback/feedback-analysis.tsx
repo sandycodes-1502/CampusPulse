@@ -101,7 +101,7 @@ export function FeedbackAnalysis() {
           <CardHeader>
             <CardTitle>Student Feedback Inbox</CardTitle>
             <CardDescription>
-              A collection of all feedback submitted by students.
+              A collection of all feedback submitted by students from Firestore.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -120,7 +120,7 @@ export function FeedbackAnalysis() {
                         <Badge variant="outline">{item.category}</Badge>
                       </div>
                       <p className="text-xs text-muted-foreground mt-2">
-                        {format(new Date(item.submissionDate), 'MMM d, yyyy')}{' '}
+                        {format(item.submissionDate.toDate(), 'MMM d, yyyy')}{' '}
                         &middot; {item.studentName}
                       </p>
                     </div>

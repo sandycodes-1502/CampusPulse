@@ -357,7 +357,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Feedback",
       "type": "object",
-      "description": "Represents feedback submitted by a student.",
+      "description": "Represents feedback submitted by a student. Can be anonymous.",
       "properties": {
         "id": {
           "type": "string",
@@ -365,11 +365,11 @@
         },
         "studentId": {
           "type": "string",
-          "description": "Reference to Student. (Relationship: Student 1:N Feedback)"
+          "description": "Reference to Student. Can be 'anonymous'."
         },
         "studentName": {
           "type": "string",
-          "description": "Denormalized full name of the student for display purposes."
+          "description": "Denormalized full name of the student. Can be 'Anonymous'."
         },
         "feedbackText": {
           "type": "string",
@@ -387,8 +387,6 @@
       },
       "required": [
         "id",
-        "studentId",
-        "studentName",
         "feedbackText",
         "submissionDate",
         "category"
@@ -581,18 +579,14 @@
         }
       },
       {
-        "path": "/users/{userId}/feedback/{feedbackId}",
+        "path": "/feedbacks/{feedbackId}",
         "definition": {
           "entityName": "Feedback",
           "schema": {
             "$ref": "#/backend/entities/Feedback"
           },
-          "description": "Stores a student's feedback submissions.",
+          "description": "Stores anonymous feedback submissions.",
           "params": [
-            {
-              "name": "userId",
-              "description": "The Firebase Authentication UID of the user."
-            },
             {
               "name": "feedbackId",
               "description": "The unique ID of the feedback."

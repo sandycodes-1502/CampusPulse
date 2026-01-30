@@ -1,50 +1,22 @@
-"use client";
+'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { initialFeedback } from '@/lib/data';
+import { useCollection } from 'react-firebase-hooks/firestore';
+import { collection, query, orderBy } from 'firebase/firestore';
 import type { Feedback } from '@/lib/types';
-
-const STORAGE_KEY = 'campus-pulse-feedback';
+import { getFirebase } from '@/firebase/client-provider';
 
 export function useFeedbackStore() {
-  const [feedback, setFeedback] = useState<Feedback[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { db } = getFirebase();
+  const feedbacksRef = collection(db, 'feedbacks');
+  const q = query(feedbacksRef, orderBy('submissionDate', 'desc'));
 
-  useEffect(() => {
-    try {
-      const storedFeedback = window.localStorage.getItem(STORAGE_KEY);
-      if (storedFeedback) {
-        setFeedback(JSON.parse(storedFeedback));
-      } else {
-        setFeedback(initialFeedback);
-      }
-    } catch (error) {
-      console.error('Failed to read from localStorage', error);
-      setFeedback(initialFeedback);
-    }
-    setIsLoading(false);
-  }, []);
+  const [value, isLoading, error] = useCollection(q);
 
-  useEffect(() => {
-    if (!isLoading) {
-      try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(feedback));
-      } catch (error) {
-        console.error('Failed to write to localStorage', error);
-      }
-    }
-  }, [feedback, isLoading]);
-  
-  const addFeedback = useCallback((newFeedback: Omit<Feedback, 'id' | 'submissionDate'>) => {
-    setFeedback(prev => [
-      { 
-        ...newFeedback,
-        id: `fb-${Date.now()}`,
-        submissionDate: new Date().toISOString(),
-      },
-      ...prev,
-    ]);
-  }, []);
+  const feedback: Feedback[] =
+    value?.docs.map((doc) => ({
+      id: doc.id,
+      ...(doc.data() as Omit<Feedback, 'id'>),
+    })) || [];
 
-  return { feedback, addFeedback, isLoading };
+  return { feedback, isLoading, error };
 }

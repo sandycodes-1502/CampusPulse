@@ -5,6 +5,8 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { getFirestore, collection, addDoc, Timestamp } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -25,9 +27,9 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { useFeedbackStore } from '@/hooks/use-feedback-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageHeader } from '@/components/layout/page-header';
+import { getFirebase } from '@/firebase/client-provider';
 
 const feedbackFormSchema = z.object({
   category: z.enum(['Hostel', 'College'], {
@@ -46,7 +48,9 @@ type FeedbackFormValues = z.infer<typeof feedbackFormSchema>;
 export default function SubmitFeedbackPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { addFeedback } = useFeedbackStore();
+  const { db } = getFirebase();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
 
   const form = useForm<FeedbackFormValues>({
     resolver: zodResolver(feedbackFormSchema),
@@ -55,19 +59,33 @@ export default function SubmitFeedbackPage() {
     },
   });
 
-  function onSubmit(data: FeedbackFormValues) {
-    addFeedback({
-      studentId: 'anonymous', // Hardcoded as auth is removed
-      studentName: 'Anonymous', // Hardcoded as auth is removed
-      ...data
-    });
+  async function onSubmit(data: FeedbackFormValues) {
+    setIsSubmitting(true);
+    try {
+        const feedbacksRef = collection(db, 'feedbacks');
+        await addDoc(feedbacksRef, {
+            studentId: 'anonymous',
+            studentName: 'Anonymous',
+            category: data.category,
+            feedbackText: data.feedbackText,
+            submissionDate: Timestamp.now(),
+        });
 
-    toast({
-      title: 'Feedback Submitted!',
-      description:
-        'Thank you for your valuable feedback. We will look into it.',
-    });
-    router.push('/student-dashboard');
+        toast({
+            title: 'Feedback Submitted!',
+            description: 'Thank you for your valuable feedback. We will look into it.',
+        });
+        router.push('/student-dashboard');
+    } catch (error) {
+        console.error("Failed to submit feedback:", error);
+        toast({
+            variant: 'destructive',
+            title: 'Submission Failed',
+            description: 'There was a problem with your request.',
+        });
+    } finally {
+        setIsSubmitting(false);
+    }
   }
 
   return (
@@ -146,9 +164,9 @@ export default function SubmitFeedbackPage() {
                   </Button>
                   <Button
                     type="submit"
-                    disabled={form.formState.isSubmitting}
+                    disabled={isSubmitting}
                   >
-                    {form.formState.isSubmitting
+                    {isSubmitting
                       ? 'Submitting...'
                       : 'Submit Feedback'}
                   </Button>

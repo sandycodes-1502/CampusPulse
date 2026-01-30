@@ -24,7 +24,7 @@ export type Feedback = {
   studentId: string;
   studentName: string;
   feedbackText: string;
-  submissionDate: string;
+  submissionDate: Timestamp;
   category: 'Hostel' | 'College';
 };
 
