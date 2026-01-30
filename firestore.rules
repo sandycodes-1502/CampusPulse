@@ -10,11 +10,5 @@ service cloud.firestore {
     match /feedbacks/{feedbackId} {
       allow read, write: if true;
     }
-
-    // For demonstration purposes, allow access to other collections as well.
-    // In a production app, these rules should be more restrictive.
-    match /{document=**} {
-      allow read, write: if true;
-    }
   }
 }
