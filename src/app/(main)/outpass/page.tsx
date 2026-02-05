@@ -4,7 +4,6 @@
 import Link from 'next/link';
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import { format } from 'date-fns';
-import { doc, updateDoc } from 'firebase/firestore';
 
 import { PageHeader } from '@/components/layout/page-header';
 import {
@@ -35,26 +34,14 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useOutpassesStore } from '@/hooks/use-outpasses-store';
-import { getFirebase } from '@/firebase/client-provider';
 
 export default function OutpassPage() {
   const { toast } = useToast();
-  const { outpasses, isLoading } = useOutpassesStore();
-  const { db } = getFirebase();
+  const { outpasses, isLoading, updateOutpass } = useOutpassesStore();
 
   const handleStatusChange = async (docId: string, status: 'approved' | 'rejected' | 'used') => {
-    try {
-      const outpassRef = doc(db, 'outpass-data', docId);
-      await updateDoc(outpassRef, { status });
-      toast({ title: `Outpass has been ${status}.` });
-    } catch (error) {
-      console.error('Failed to update outpass status:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Update failed',
-        description: 'Could not update the outpass status.',
-      });
-    }
+    updateOutpass(docId, { status });
+    toast({ title: `Outpass has been ${status}.` });
   };
 
   const isActionable = true; // Default to admin/security view
@@ -74,7 +61,7 @@ export default function OutpassPage() {
           <CardHeader>
             <CardTitle>Outpass Requests</CardTitle>
             <CardDescription>
-              Manage and track all student outpass requests from the live database.
+              Manage and track all student outpass requests.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -84,8 +71,7 @@ export default function OutpassPage() {
                   <TableHead className="w-[100px]">ID</TableHead>
                   <TableHead>Student Name</TableHead>
                   <TableHead>Reason</TableHead>
-                  <TableHead className="hidden md:table-cell">From</TableHead>
-                  <TableHead className="hidden md:table-cell">To</TableHead>
+                  <TableHead className="hidden md:table-cell">Duration</TableHead>
                   <TableHead className="text-center">Status</TableHead>
                   {isActionable && (
                     <TableHead className="text-right">
@@ -101,8 +87,7 @@ export default function OutpassPage() {
                       <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-48" /></TableCell>
-                      <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
-                      <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
+                      <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-40" /></TableCell>
                       <TableCell className="text-center"><Skeleton className="h-6 w-20 mx-auto" /></TableCell>
                       {isActionable && (
                           <TableCell className="text-right">
@@ -113,7 +98,7 @@ export default function OutpassPage() {
                   ))
                 ) : outpasses?.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={isActionable ? 7 : 6} className="h-24 text-center">
+                    <TableCell colSpan={isActionable ? 6 : 5} className="h-24 text-center">
                       No outpass requests found.
                     </TableCell>
                   </TableRow>
@@ -126,10 +111,7 @@ export default function OutpassPage() {
                       </TableCell>
                       <TableCell>{outpass.reason}</TableCell>
                       <TableCell className="hidden md:table-cell">
-                        {format(outpass.duration.startdate.toDate(), 'dd MMM, p')}
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        {format(outpass.duration.enddate.toDate(), 'dd MMM, p')}
+                        {format(new Date(outpass.duration.startdate), 'dd MMM, p')} - {format(new Date(outpass.duration.enddate), 'dd MMM, p')}
                       </TableCell>
                       <TableCell className="text-center">
                         <Badge

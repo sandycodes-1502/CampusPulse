@@ -5,11 +5,9 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { format } from 'date-fns';
+import { format, formatISO } from 'date-fns';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { useState } from 'react';
-import { collection, addDoc, query, orderBy, limit, getDocs, Timestamp } from 'firebase/firestore';
-
 
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -37,7 +35,7 @@ import {
 } from '@/components/ui/card';
 import { PageHeader } from '@/components/layout/page-header';
 import { cn } from '@/lib/utils';
-import { getFirebase } from '@/firebase/client-provider';
+import { useOutpassesStore } from '@/hooks/use-outpasses-store';
 
 
 const outpassFormSchema = z.object({
@@ -55,8 +53,7 @@ type OutpassFormValues = z.infer<typeof outpassFormSchema>;
 export default function NewOutpassPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { db } = getFirebase();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { addOutpass } = useOutpassesStore();
 
   const form = useForm<OutpassFormValues>({
     resolver: zodResolver(outpassFormSchema),
@@ -66,41 +63,22 @@ export default function NewOutpassPage() {
     }
   });
 
-  async function onSubmit(data: OutpassFormValues) {
-    setIsSubmitting(true);
-    try {
-      const outpassesRef = collection(db, 'outpass-data');
-      
-      const q = query(outpassesRef, orderBy('id', 'desc'), limit(1));
-      const querySnapshot = await getDocs(q);
-      const newId = querySnapshot.empty ? 1111 : querySnapshot.docs[0].data().id + 1;
+  function onSubmit(data: OutpassFormValues) {
+    addOutpass({
+      name: data.name,
+      reason: data.reason,
+      duration: {
+          startdate: formatISO(data.startdate),
+          enddate: formatISO(data.enddate),
+      },
+      status: 'pending',
+    });
 
-      await addDoc(outpassesRef, {
-          id: newId,
-          name: data.name,
-          reason: data.reason,
-          duration: {
-              startdate: Timestamp.fromDate(data.startdate),
-              enddate: Timestamp.fromDate(data.enddate),
-          },
-          status: 'pending',
-      });
-
-      toast({
-          title: 'Outpass Request Submitted',
-          description: 'Your request is now pending approval.',
-      });
-      router.push('/student-dashboard');
-    } catch (error) {
-        console.error("Failed to submit outpass:", error);
-        toast({
-            variant: 'destructive',
-            title: 'Submission Failed',
-            description: 'There was a problem with your request.',
-        });
-    } finally {
-        setIsSubmitting(false);
-    }
+    toast({
+        title: 'Outpass Request Submitted',
+        description: 'Your request is now pending approval.',
+    });
+    router.push('/student-dashboard');
   }
 
   return (
@@ -231,8 +209,8 @@ export default function NewOutpassPage() {
                   <Button variant="ghost" asChild>
                     <Link href="/student-dashboard">Cancel</Link>
                   </Button>
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting
+                  <Button type="submit" disabled={form.formState.isSubmitting}>
+                    {form.formState.isSubmitting
                       ? 'Submitting...'
                       : 'Submit Request'}
                   </Button>

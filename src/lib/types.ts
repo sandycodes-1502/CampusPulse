@@ -29,13 +29,13 @@ export type Feedback = {
 };
 
 export type Outpass = {
-  docId: string; // The actual Firestore document ID
-  id: number; // Your custom 4-digit numeric ID
+  docId: string;
+  id: number;
   name: string;
   reason: string;
   duration: {
-    startdate: Timestamp;
-    enddate: Timestamp;
+    startdate: string;
+    enddate: string;
   };
   status: 'pending' | 'approved' | 'rejected' | 'used';
 };

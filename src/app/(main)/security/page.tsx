@@ -13,8 +13,6 @@ import {
   UserCheck,
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { doc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
-
 
 import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
@@ -44,14 +42,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useOutpassesStore } from '@/hooks/use-outpasses-store';
 import { entryExitLogs as mockLogs } from '@/lib/data';
-import { getFirebase } from '@/firebase/client-provider';
 
 type OutpassVerificationResult = Outpass | { status: 'Not Found' | 'Not Approved' | 'Used' | 'Rejected' };
 
 function OutpassVerification() {
   const { toast } = useToast();
-  const { outpasses, isLoading: isLoadingOutpasses } = useOutpassesStore();
-  const { db } = getFirebase();
+  const { outpasses, isLoading: isLoadingOutpasses, updateOutpass } = useOutpassesStore();
+
   const [outpassId, setOutpassId] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationResult, setVerificationResult] = useState<OutpassVerificationResult | null>(null);
@@ -61,7 +58,7 @@ function OutpassVerification() {
     return outpasses.filter((o) => o.status === 'approved');
   }, [outpasses]);
 
-  const handleVerify = async () => {
+  const handleVerify = () => {
     if (!outpassId) return;
     
     const numericOutpassId = parseInt(outpassId, 10);
@@ -72,42 +69,27 @@ function OutpassVerification() {
 
     setIsVerifying(true);
     setVerificationResult(null);
-    
-    try {
-      const q = query(collection(db, "outpass-data"), where("id", "==", numericOutpassId));
-      const querySnapshot = await getDocs(q);
 
-      if (querySnapshot.empty) {
+    // Simulate network delay
+    setTimeout(() => {
+      const outpass = outpasses.find((o) => o.id === numericOutpassId);
+
+      if (!outpass) {
         setVerificationResult({ status: 'Not Found' });
+      } else if (outpass.status === 'approved') {
+        setVerificationResult(outpass);
       } else {
-        const outpassDoc = querySnapshot.docs[0];
-        const outpass = { docId: outpassDoc.id, ...outpassDoc.data() } as Outpass;
-
-        if (outpass.status === 'approved') {
-          setVerificationResult(outpass);
-        } else {
-          setVerificationResult({ status: outpass.status as 'Not Approved' | 'Used' | 'Rejected' });
-        }
+        setVerificationResult({ status: outpass.status as 'Not Approved' | 'Used' | 'Rejected' });
       }
-    } catch (error) {
-      console.error("Error verifying outpass:", error);
-      toast({ variant: 'destructive', title: 'Verification failed' });
-    }
-    
-    setIsVerifying(false);
+      setIsVerifying(false);
+    }, 500);
   };
   
   const handleMarkAsUsed = async (outpass: Outpass) => {
-    try {
-        const outpassRef = doc(db, 'outpass-data', outpass.docId);
-        await updateDoc(outpassRef, { status: 'used' });
-        toast({ title: 'Outpass marked as used.' });
-        setVerificationResult(null);
-        setOutpassId('');
-    } catch (error) {
-        console.error("Failed to update outpass:", error);
-        toast({ variant: 'destructive', title: 'Update failed' });
-    }
+    updateOutpass(outpass.docId, { status: 'used' });
+    toast({ title: 'Outpass marked as used.' });
+    setVerificationResult(null);
+    setOutpassId('');
   };
   
   return (
@@ -165,7 +147,7 @@ function OutpassVerification() {
                         <p className="text-sm flex items-center gap-1">
                           <Clock className="h-4 w-4 text-muted-foreground" />
                           <span>
-                            {format(verificationResult.duration.startdate.toDate(), 'p, dd MMM')} - {format(verificationResult.duration.enddate.toDate(), 'p, dd MMM')}
+                            {format(new Date(verificationResult.duration.startdate), 'p, dd MMM')} - {format(new Date(verificationResult.duration.enddate), 'p, dd MMM')}
                           </span>
                         </p>
                         <Badge className="w-fit bg-green-100 text-green-800 hover:bg-green-200">Valid & Approved</Badge>
@@ -223,7 +205,7 @@ function OutpassVerification() {
                       <div className="font-medium">{outpass.name}</div>
                       <div className="text-sm text-muted-foreground">{outpass.id}</div>
                     </TableCell>
-                    <TableCell>{format(outpass.duration.enddate.toDate(), 'p, dd MMM')}</TableCell>
+                    <TableCell>{format(new Date(outpass.duration.enddate), 'p, dd MMM')}</TableCell>
                     <TableCell className='text-right'>
                       <Button variant="outline" size="sm" onClick={() => handleMarkAsUsed(outpass)}>Mark Used</Button>
                     </TableCell>

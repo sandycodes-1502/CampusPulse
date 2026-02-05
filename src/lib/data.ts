@@ -1,5 +1,5 @@
-import type { Student, Room, Announcement, Complaint, Fee, EntryExitLog } from './types';
-import { subDays, formatISO } from 'date-fns';
+import type { Student, Room, Announcement, Complaint, Fee, EntryExitLog, Outpass } from './types';
+import { subDays, formatISO, addDays } from 'date-fns';
 
 export const students: Student[] = [
     { id: 'student01', userId: 'user01', name: 'Alice Johnson', email: 'alice@example.com', hostelRoomId: 'room01', major: 'Computer Science' },
@@ -22,6 +22,13 @@ export const initialAnnouncements: Announcement[] = [
     { id: 'ann01', title: 'Hostel Maintenance Schedule', content: 'Please note that there will be scheduled maintenance in B-Wing on Friday from 9 AM to 5 PM.', postDate: formatISO(subDays(new Date(), 1)), adminId: 'admin01' },
     { id: 'ann02', title: 'Annual Sports Fest "Enthusia 2024"', content: 'Get ready for the biggest sports event of the year! Registrations open tomorrow.', postDate: formatISO(subDays(new Date(), 2)), adminId: 'admin01' },
     { id: 'ann03', title: 'Library Extended Hours for Exams', content: 'The central library will be open 24/7 from next week for the upcoming semester exams.', postDate: formatISO(subDays(new Date(), 5)), adminId: 'admin01' },
+];
+
+export const initialOutpasses: Outpass[] = [
+    { docId: 'op01', id: 1111, name: 'John Doe', reason: 'Family Function', duration: { startdate: formatISO(new Date()), enddate: formatISO(addDays(new Date(), 2)) }, status: 'approved' },
+    { docId: 'op02', id: 1112, name: 'Jane Smith', reason: 'Weekend Trip', duration: { startdate: formatISO(addDays(new Date(), 1)), enddate: formatISO(addDays(new Date(), 3)) }, status: 'pending' },
+    { docId: 'op03', id: 1113, name: 'Peter Jones', reason: 'Medical Appointment', duration: { startdate: formatISO(subDays(new Date(), 3)), enddate: formatISO(subDays(new Date(), 2)) }, status: 'used' },
+    { docId: 'op04', id: 1114, name: 'Mary Johnson', reason: 'Shopping', duration: { startdate: formatISO(subDays(new Date(), 5)), enddate: formatISO(subDays(new Date(), 5)) }, status: 'rejected' },
 ];
 
 export const initialComplaints: Complaint[] = [
