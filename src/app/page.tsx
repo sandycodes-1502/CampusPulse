@@ -33,8 +33,8 @@ export default function Home() {
               {heroImage && (
                 <Image
                   alt="Hero"
-                  className="mx-auto aspect-video overflow-hidden rounded-xl object-cover sm:w-full lg:order-last lg:aspect-square"
-                  height="600"
+                  className="mx-auto aspect-video w-full overflow-hidden rounded-xl object-cover lg:order-last"
+                  height="338"
                   src={heroImage.imageUrl}
                   width="600"
                   data-ai-hint={heroImage.imageHint}
