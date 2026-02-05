@@ -38,6 +38,7 @@ export default function Home() {
                   src={heroImage.imageUrl}
                   width="600"
                   data-ai-hint={heroImage.imageHint}
+                  priority
                 />
               )}
               <div className="flex flex-col justify-center space-y-4">
